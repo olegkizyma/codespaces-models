@@ -16,6 +16,7 @@
   ,
   "scripts": {
     "start": "node server.js",
-    "dev": "node server.js"
+    "dev": "node server.js",
+    "test-models": "node scripts/test_models.mjs"
   }
 }

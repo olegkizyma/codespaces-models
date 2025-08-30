@@ -10,22 +10,47 @@
     pre { background:#f6f8fa; padding:1rem; overflow:auto }
     .row { display:flex; gap:1rem }
     .col { flex:1 }
+    
+    .tabs { display:flex; border-bottom: 1px solid #ddd; margin-bottom: 1rem }
+    .tab { padding: 0.5rem 1rem; cursor: pointer; border: none; background: none }
+    .tab.active { background: #007acc; color: white }
+    .tab-content { display: none }
+    .tab-content.active { display: block }
+    
+    #simpleChat { max-height: 300px; overflow-y: auto; border: 1px solid #ddd; padding: 1rem; margin-bottom: 1rem }
+    .message { margin-bottom: 0.5rem; padding: 0.25rem }
+    .user { color: #0066cc; font-weight: bold }
+    .assistant { color: #006600 }
+    .error { color: #cc0000; background: #ffe6e6; padding: 0.5rem; border-radius: 4px }
+    .loading { color: #666; font-style: italic }
+    
+    .model-status { font-size: 0.8em; margin-left: 0.5rem }
+    .working { color: #006600 }
+    .error-status { color: #cc0000 }
+    
+    .clear-btn { background: #ff6b6b; color: white; border: none; padding: 0.25rem 0.5rem; margin-left: 0.5rem; border-radius: 3px; cursor: pointer }
+    .test-btn { background: #4ecdc4; color: white; border: none; padding: 0.25rem 0.5rem; margin-left: 0.5rem; border-radius: 3px; cursor: pointer }
   </style>
 </head>
 <body>
   <h1>Model Proxy Tester</h1>
   <p>Send a chat or completion request to the local proxy.</p>
 
+  <div class="tabs">
+    <button class="tab active" onclick="showTab('advanced')">Advanced</button>
+    <button class="tab" onclick="showTab('simple')">Simple Chat</button>
+  </div>
+
+  <div id="advanced-tab" class="tab-content active">
+
   <label>Model ID
     <select id="model" style="width:100%">
       <option>openai/gpt-4o-mini</option>
       <option>openai/gpt-4o</option>
-      <option>openai/gpt-4</option>
-      <option>openai/gpt-4-turbo</option>
-      <option>openai/gpt-4o-mini-2024-07-18</option>
-      <option>mistral-ai/mistral-small</option>
-      <option>mistral-small</option>
-      <option>mistral-large</option>
+      <option>microsoft/Phi-3.5-mini-instruct</option>
+      <option>microsoft/Phi-3-mini-4k-instruct</option>
+      <option>AI21-Jamba-1.5-Mini</option>
+      <option>AI21-Jamba-1.5-Large</option>
     </select>
   </label>
 
@@ -50,12 +75,132 @@
   <pre id="result">(no response yet)</pre>
   <h3>History</h3>
   <pre id="history">(no history)</pre>
+  </div>
+
+  <div id="simple-tab" class="tab-content">
+    <label>Model
+      <select id="simpleModel" style="width:100%">
+        <option>openai/gpt-4o-mini</option>
+        <option>openai/gpt-4o</option>
+        <option>microsoft/Phi-3.5-mini-instruct</option>
+        <option>microsoft/Phi-3-mini-4k-instruct</option>
+        <option>AI21-Jamba-1.5-Mini</option>
+        <option>AI21-Jamba-1.5-Large</option>
+      </select>
+      <button class="clear-btn" id="clearChat">Clear</button>
+      <button class="test-btn" id="testModel">Test Model</button>
+    </label>
+    
+    <div id="simpleChat"></div>
+    
+    <div class="row">
+      <div class="col">
+        <input id="simpleInput" placeholder="Type your message..." style="width:100%; padding:0.5rem" />
+      </div>
+      <div style="flex:0">
+        <button id="simpleSend" style="padding:0.5rem 1rem">Send</button>
+      </div>
+    </div>
+  </div>
 
   <script>
     const send = document.getElementById('send');
     const result = document.getElementById('result');
     const textOnlyBtn = document.getElementById('textOnly');
     const historyPre = document.getElementById('history');
+
+    function showTab(tabName) {
+      document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+      document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
+      event.target.classList.add('active');
+      document.getElementById(tabName + '-tab').classList.add('active');
+    }
+
+    // Simple chat functionality
+    const simpleChat = document.getElementById('simpleChat');
+    const simpleInput = document.getElementById('simpleInput');
+    const simpleSend = document.getElementById('simpleSend');
+    const simpleModel = document.getElementById('simpleModel');
+    const clearChat = document.getElementById('clearChat');
+    const testModel = document.getElementById('testModel');
+
+    function addMessage(role, content) {
+      const div = document.createElement('div');
+      div.className = `message ${role}`;
+      if (role === 'error') {
+        div.innerHTML = `<span class="${role}">error:</span> ${content}`;
+      } else if (role === 'loading') {
+        div.innerHTML = `<span class="${role}">⏳ loading...</span>`;
+      } else {
+        div.innerHTML = `<span class="${role}">${role}:</span> ${content}`;
+      }
+      simpleChat.appendChild(div);
+      simpleChat.scrollTop = simpleChat.scrollHeight;
+      return div;
+    }
+
+    function clearChatHistory() {
+      simpleChat.innerHTML = '';
+    }
+
+    async function testCurrentModel() {
+      const model = simpleModel.value;
+      const loadingMsg = addMessage('loading', `Testing ${model}...`);
+      
+      try {
+        const response = await fetch('/v1/simple-chat', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ model, message: "Test" })
+        });
+        
+        const data = await response.json();
+        loadingMsg.remove();
+        
+        if (data.error) {
+          addMessage('error', `${model} - ${data.error}`);
+        } else {
+          addMessage('assistant', `✅ ${model} works! Response: "${data.response.substring(0, 50)}..."`);
+        }
+      } catch (err) {
+        loadingMsg.remove();
+        addMessage('error', `${model} - Connection error: ${err.message}`);
+      }
+    }
+
+    async function sendSimpleMessage() {
+      const message = simpleInput.value.trim();
+      if (!message) return;
+      
+      const model = simpleModel.value;
+      addMessage('user', message);
+      simpleInput.value = '';
+      
+      try {
+        const response = await fetch('/v1/simple-chat', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ model, message })
+        });
+        
+        const data = await response.json();
+        if (data.error) {
+          addMessage('error', data.error);
+        } else {
+          addMessage('assistant', data.response);
+        }
+      } catch (err) {
+        addMessage('error', 'Connection error: ' + err.message);
+      }
+    }
+
+    simpleSend.addEventListener('click', sendSimpleMessage);
+    simpleInput.addEventListener('keypress', (e) => {
+      if (e.key === 'Enter') sendSimpleMessage();
+    });
+    
+    clearChat.addEventListener('click', clearChatHistory);
+    testModel.addEventListener('click', testCurrentModel);
 
     async function appendHistory(entry){
       try{

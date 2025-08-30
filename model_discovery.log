@@ -1,0 +1,292 @@
+🔍 Discovering ALL GitHub Models...
+
+Testing 73 potential models...
+
+Testing openai/gpt-4o-mini...
+[1/73] ✅ WORKING openai/gpt-4o-mini
+   → "Hello! How can I..."
+Testing openai/gpt-4o...
+[2/73] ✅ WORKING openai/gpt-4o
+   → "Hello! How can I..."
+Testing openai/gpt-4...
+[3/73] ❌ NOT AVAILABLE openai/gpt-4
+   → Model not found
+Testing openai/gpt-4-turbo...
+[4/73] ❌ NOT AVAILABLE openai/gpt-4-turbo
+   → Model not found
+Testing openai/gpt-3.5-turbo...
+[5/73] ❌ NOT AVAILABLE openai/gpt-3.5-turbo
+   → Model not found
+Testing gpt-4o-mini...
+[6/73] ✅ WORKING gpt-4o-mini
+   → "Hello! How can I..."
+Testing gpt-4o...
+[7/73] ✅ WORKING gpt-4o
+   → "Hello! How can I..."
+Testing gpt-4...
+[8/73] ❌ NOT AVAILABLE gpt-4
+   → Model not found
+Testing gpt-4-turbo...
+[9/73] ❌ NOT AVAILABLE gpt-4-turbo
+   → Model not found
+Testing gpt-3.5-turbo...
+[10/73] ❌ NOT AVAILABLE gpt-3.5-turbo
+   → Model not found
+Testing microsoft/Phi-3.5-mini-instruct...
+[11/73] ✅ WORKING microsoft/Phi-3.5-mini-instruct
+   → " Hello! How can I..."
+Testing microsoft/Phi-3-mini-4k-instruct...
+[12/73] ✅ WORKING microsoft/Phi-3-mini-4k-instruct
+   → " Hello! How can I..."
+Testing microsoft/Phi-3-medium-4k-instruct...
+[13/73] ✅ WORKING microsoft/Phi-3-medium-4k-instruct
+   → " Hello! How can I..."
+Testing microsoft/Phi-3-small-8k-instruct...
+[14/73] ✅ WORKING microsoft/Phi-3-small-8k-instruct
+   → "Hello there! How can..."
+Testing microsoft/Phi-3.5-MoE-instruct...
+[15/73] ✅ WORKING microsoft/Phi-3.5-MoE-instruct
+   → " Hello! How can I..."
+Testing microsoft/DialoGPT-medium...
+[16/73] ❌ NOT AVAILABLE microsoft/DialoGPT-medium
+   → Model not found
+Testing Phi-3.5-mini-instruct...
+[17/73] ✅ WORKING Phi-3.5-mini-instruct
+   → " Hello! How can I..."
+Testing Phi-3-mini-4k-instruct...
+[18/73] ✅ WORKING Phi-3-mini-4k-instruct
+   → " Hello! How can I..."
+Testing Phi-3-medium-4k-instruct...
+[19/73] ✅ WORKING Phi-3-medium-4k-instruct
+   → " Hello! How can I..."
+Testing meta-llama/Llama-3.2-3B-Instruct...
+[20/73] ❌ NOT AVAILABLE meta-llama/Llama-3.2-3B-Instruct
+   → Model not found
+Testing meta-llama/Llama-3.2-1B-Instruct...
+[21/73] ❌ NOT AVAILABLE meta-llama/Llama-3.2-1B-Instruct
+   → Model not found
+Testing meta-llama/Llama-3.1-70B-Instruct...
+[22/73] ❌ NOT AVAILABLE meta-llama/Llama-3.1-70B-Instruct
+   → Model not found
+Testing meta-llama/Llama-3.1-8B-Instruct...
+[23/73] ❌ NOT AVAILABLE meta-llama/Llama-3.1-8B-Instruct
+   → Model not found
+Testing meta-llama/Meta-Llama-3-70B-Instruct...
+[24/73] ❌ NOT AVAILABLE meta-llama/Meta-Llama-3-70B-Instruct
+   → Model not found
+Testing meta-llama/Meta-Llama-3-8B-Instruct...
+[25/73] ❌ NOT AVAILABLE meta-llama/Meta-Llama-3-8B-Instruct
+   → Model not found
+Testing meta-llama/CodeLlama-7b-Instruct-hf...
+[26/73] ❌ NOT AVAILABLE meta-llama/CodeLlama-7b-Instruct-hf
+   → Model not found
+Testing meta-llama/CodeLlama-13b-Instruct-hf...
+[27/73] ❌ NOT AVAILABLE meta-llama/CodeLlama-13b-Instruct-hf
+   → Model not found
+Testing Llama-3.2-3B-Instruct...
+[28/73] ❌ NOT AVAILABLE Llama-3.2-3B-Instruct
+   → Model not found
+Testing Llama-3.2-1B-Instruct...
+[29/73] ❌ NOT AVAILABLE Llama-3.2-1B-Instruct
+   → Model not found
+Testing Llama-3.1-70B-Instruct...
+[30/73] ❌ NOT AVAILABLE Llama-3.1-70B-Instruct
+   → Model not found
+Testing Llama-3.1-8B-Instruct...
+[31/73] ❌ NOT AVAILABLE Llama-3.1-8B-Instruct
+   → Model not found
+Testing mistralai/Mistral-7B-Instruct-v0.3...
+[32/73] ❌ NOT AVAILABLE mistralai/Mistral-7B-Instruct-v0.3
+   → Model not found
+Testing mistralai/Mixtral-8x7B-Instruct-v0.1...
+[33/73] ❌ NOT AVAILABLE mistralai/Mixtral-8x7B-Instruct-v0.1
+   → Model not found
+Testing mistralai/Mistral-Small...
+[34/73] ❌ NOT AVAILABLE mistralai/Mistral-Small
+   → Model not found
+Testing mistralai/Mistral-Large...
+[35/73] ❌ NOT AVAILABLE mistralai/Mistral-Large
+   → Model not found
+Testing mistralai/Codestral-22B-v0.1...
+[36/73] ❌ NOT AVAILABLE mistralai/Codestral-22B-v0.1
+   → Model not found
+Testing mistral-large...
+[37/73] ❌ NOT AVAILABLE mistral-large
+   → Model not found
+Testing mistral-small...
+[38/73] ❌ NOT AVAILABLE mistral-small
+   → Model not found
+Testing Mistral-7B-Instruct-v0.3...
+[39/73] ❌ NOT AVAILABLE Mistral-7B-Instruct-v0.3
+   → Model not found
+Testing Mixtral-8x7B-Instruct-v0.1...
+[40/73] ❌ NOT AVAILABLE Mixtral-8x7B-Instruct-v0.1
+   → Model not found
+Testing AI21-Jamba-1.5-Mini...
+[41/73] ✅ WORKING AI21-Jamba-1.5-Mini
+   → " Hello! How can I..."
+Testing AI21-Jamba-1.5-Large...
+[42/73] ✅ WORKING AI21-Jamba-1.5-Large
+   → " Hello! How can I..."
+Testing ai21/jamba-instruct...
+[43/73] ❌ NOT AVAILABLE ai21/jamba-instruct
+   → Model not found
+Testing ai21/j2-ultra...
+[44/73] ❌ NOT AVAILABLE ai21/j2-ultra
+   → Model not found
+Testing ai21/j2-mid...
+[45/73] ❌ NOT AVAILABLE ai21/j2-mid
+   → Model not found
+Testing Jamba-1.5-Mini...
+[46/73] ❌ NOT AVAILABLE Jamba-1.5-Mini
+   → Model not found
+Testing Jamba-1.5-Large...
+[47/73] ❌ NOT AVAILABLE Jamba-1.5-Large
+   → Model not found
+Testing cohere/Cohere-command-r...
+[48/73] ❌ NOT AVAILABLE cohere/Cohere-command-r
+   → Model not found
+Testing cohere/Cohere-command-r-plus...
+[49/73] ❌ NOT AVAILABLE cohere/Cohere-command-r-plus
+   → Model not found
+Testing cohere/command-r...
+[50/73] ❌ NOT AVAILABLE cohere/command-r
+   → Model not found
+Testing cohere/command-r-plus...
+[51/73] ❌ NOT AVAILABLE cohere/command-r-plus
+   → Model not found
+Testing cohere/command-light...
+[52/73] ❌ NOT AVAILABLE cohere/command-light
+   → Model not found
+Testing Cohere-command-r...
+[53/73] ❌ NOT AVAILABLE Cohere-command-r
+   → Model not found
+Testing Cohere-command-r-plus...
+[54/73] ❌ NOT AVAILABLE Cohere-command-r-plus
+   → Model not found
+Testing anthropic/claude-3-haiku...
+[55/73] ❌ NOT AVAILABLE anthropic/claude-3-haiku
+   → Model not found
+Testing anthropic/claude-3-sonnet...
+[56/73] ❌ NOT AVAILABLE anthropic/claude-3-sonnet
+   → Model not found
+Testing anthropic/claude-3-opus...
+[57/73] ❌ NOT AVAILABLE anthropic/claude-3-opus
+   → Model not found
+Testing anthropic/claude-3.5-sonnet...
+[58/73] ❌ NOT AVAILABLE anthropic/claude-3.5-sonnet
+   → Model not found
+Testing claude-3-haiku...
+[59/73] ❌ NOT AVAILABLE claude-3-haiku
+   → Model not found
+Testing claude-3-sonnet...
+[60/73] ❌ NOT AVAILABLE claude-3-sonnet
+   → Model not found
+Testing claude-3.5-sonnet...
+[61/73] ❌ NOT AVAILABLE claude-3.5-sonnet
+   → Model not found
+Testing google/gemini-1.5-pro...
+[62/73] ❌ NOT AVAILABLE google/gemini-1.5-pro
+   → Model not found
+Testing google/gemini-1.5-flash...
+[63/73] ❌ NOT AVAILABLE google/gemini-1.5-flash
+   → Model not found
+Testing google/gemma-2b-it...
+[64/73] ❌ NOT AVAILABLE google/gemma-2b-it
+   → Model not found
+Testing google/gemma-7b-it...
+[65/73] ❌ NOT AVAILABLE google/gemma-7b-it
+   → Model not found
+Testing gemini-1.5-pro...
+[66/73] ❌ NOT AVAILABLE gemini-1.5-pro
+   → Model not found
+Testing gemini-1.5-flash...
+[67/73] ❌ NOT AVAILABLE gemini-1.5-flash
+   → Model not found
+Testing stabilityai/stable-code-instruct-3b...
+[68/73] ❌ NOT AVAILABLE stabilityai/stable-code-instruct-3b
+   → Model not found
+Testing HuggingFaceH4/zephyr-7b-beta...
+[69/73] ❌ NOT AVAILABLE HuggingFaceH4/zephyr-7b-beta
+   → Model not found
+Testing teknium/OpenHermes-2.5-Mistral-7B...
+[70/73] ❌ NOT AVAILABLE teknium/OpenHermes-2.5-Mistral-7B
+   → Model not found
+Testing NousResearch/Nous-Hermes-2-Mixtral-8x7B-DPO...
+[71/73] ❌ NOT AVAILABLE NousResearch/Nous-Hermes-2-Mixtral-8x7B-DPO
+   → Model not found
+Testing databricks/dbrx-instruct...
+[72/73] ❌ NOT AVAILABLE databricks/dbrx-instruct
+   → Model not found
+Testing togethercomputer/RedPajama-INCITE-7B-Chat...
+[73/73] ❌ NOT AVAILABLE togethercomputer/RedPajama-INCITE-7B-Chat
+   → Model not found
+
+============================================================
+📊 FINAL RESULTS:
+============================================================
+
+✅ WORKING MODELS (14):
+   - openai/gpt-4o-mini
+   - openai/gpt-4o
+   - gpt-4o-mini
+   - gpt-4o
+   - microsoft/Phi-3.5-mini-instruct
+   - microsoft/Phi-3-mini-4k-instruct
+   - microsoft/Phi-3-medium-4k-instruct
+   - microsoft/Phi-3-small-8k-instruct
+   - microsoft/Phi-3.5-MoE-instruct
+   - Phi-3.5-mini-instruct
+   - Phi-3-mini-4k-instruct
+   - Phi-3-medium-4k-instruct
+   - AI21-Jamba-1.5-Mini
+   - AI21-Jamba-1.5-Large
+
+❌ NOT AVAILABLE (59):
+   - openai/gpt-4
+   - openai/gpt-4-turbo
+   - openai/gpt-3.5-turbo
+   - gpt-4
+   - gpt-4-turbo
+   - gpt-3.5-turbo
+   - microsoft/DialoGPT-medium
+   - meta-llama/Llama-3.2-3B-Instruct
+   - meta-llama/Llama-3.2-1B-Instruct
+   - meta-llama/Llama-3.1-70B-Instruct
+   ... and 49 more
+
+🔧 HTML OPTION TAGS FOR UI (14 models):
+============================================================
+      <option>openai/gpt-4o-mini</option>
+      <option>openai/gpt-4o</option>
+      <option>gpt-4o-mini</option>
+      <option>gpt-4o</option>
+      <option>microsoft/Phi-3.5-mini-instruct</option>
+      <option>microsoft/Phi-3-mini-4k-instruct</option>
+      <option>microsoft/Phi-3-medium-4k-instruct</option>
+      <option>microsoft/Phi-3-small-8k-instruct</option>
+      <option>microsoft/Phi-3.5-MoE-instruct</option>
+      <option>Phi-3.5-mini-instruct</option>
+      <option>Phi-3-mini-4k-instruct</option>
+      <option>Phi-3-medium-4k-instruct</option>
+      <option>AI21-Jamba-1.5-Mini</option>
+      <option>AI21-Jamba-1.5-Large</option>
+
+🗂️ JAVASCRIPT ARRAY:
+============================================================
+const workingModels = [
+  "openai/gpt-4o-mini",
+  "openai/gpt-4o",
+  "gpt-4o-mini",
+  "gpt-4o",
+  "microsoft/Phi-3.5-mini-instruct",
+  "microsoft/Phi-3-mini-4k-instruct",
+  "microsoft/Phi-3-medium-4k-instruct",
+  "microsoft/Phi-3-small-8k-instruct",
+  "microsoft/Phi-3.5-MoE-instruct",
+  "Phi-3.5-mini-instruct",
+  "Phi-3-mini-4k-instruct",
+  "Phi-3-medium-4k-instruct",
+  "AI21-Jamba-1.5-Mini",
+  "AI21-Jamba-1.5-Large",
+];
