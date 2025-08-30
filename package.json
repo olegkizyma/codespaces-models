@@ -1,8 +1,36 @@
 {
-  "name": "codespaces-models",
-  "version": "0.0.1",
+  "name": "openai-llm-proxy",
+  "version": "1.0.0",
+  "description": "🚀 OpenAI LLM Proxy Server with GitHub Models - 23 models from 6 providers with full OpenAI API compatibility, monitoring & web UI",
   "type": "module",
-  "private": true,
+  "main": "server.js",
+  "keywords": [
+    "openai",
+    "llm",
+    "proxy",
+    "github-models",
+    "ai",
+    "chatgpt",
+    "gpt-4",
+    "llama",
+    "phi-3",
+    "mistral",
+    "api",
+    "monitoring"
+  ],
+  "author": "olegkizyma",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/olegkizyma/codespaces-models.git"
+  },
+  "homepage": "https://github.com/olegkizyma/codespaces-models#readme",
+  "bugs": {
+    "url": "https://github.com/olegkizyma/codespaces-models/issues"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  },
   "dependencies": {
     "@azure-rest/ai-inference": "^1.0.0-beta.2",
     "@azure/core-auth": "^1.7.2",
