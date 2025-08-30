@@ -9,6 +9,9 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 
+// Serve simple static UI for testing at /ui
+app.use('/ui', express.static('public'));
+
 const OPENAI_API_KEY = process.env.OPENAI_API_KEY || process.env.GITHUB_TOKEN;
 if (!OPENAI_API_KEY) {
   console.warn("OPENAI_API_KEY or GITHUB_TOKEN is not set. The proxy will fail without credentials.");
@@ -46,6 +49,20 @@ app.post("/v1/proxy", async (req, res) => {
     const message = err?.message || String(err);
     return res.status(500).send({ error: message, details: err });
   }
+});
+
+// Simple in-memory history store (keeps only current process lifetime)
+const HISTORY = [];
+
+app.post('/v1/history', (req, res) => {
+  const item = req.body;
+  HISTORY.unshift(item);
+  if (HISTORY.length > 200) HISTORY.pop();
+  res.send(HISTORY);
+});
+
+app.get('/v1/history', (req, res) => {
+  res.send(HISTORY);
 });
 
 const port = process.env.PORT || 3010;

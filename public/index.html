@@ -1,0 +1,126 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8" />
+  <title>Model Proxy Tester</title>
+  <style>
+    body { font-family: Arial, sans-serif; max-width: 900px; margin: 2rem auto; }
+    label { display:block; margin-top: .75rem }
+    textarea { width:100%; height:120px }
+    pre { background:#f6f8fa; padding:1rem; overflow:auto }
+    .row { display:flex; gap:1rem }
+    .col { flex:1 }
+  </style>
+</head>
+<body>
+  <h1>Model Proxy Tester</h1>
+  <p>Send a chat or completion request to the local proxy.</p>
+
+  <label>Model ID
+    <select id="model" style="width:100%">
+      <option>openai/gpt-4o-mini</option>
+      <option>openai/gpt-4o</option>
+      <option>openai/gpt-4</option>
+      <option>openai/gpt-4-turbo</option>
+      <option>openai/gpt-4o-mini-2024-07-18</option>
+      <option>mistral-ai/mistral-small</option>
+      <option>mistral-small</option>
+      <option>mistral-large</option>
+    </select>
+  </label>
+
+  <label>Type
+    <select id="type"><option value="chat">chat</option><option value="completion">completion</option></select>
+  </label>
+
+  <label>Messages (JSON array) — for chat, e.g. [{"role":"user","content":"Hello"}]
+    <textarea id="input">[{"role":"user","content":"Hello"}]</textarea>
+  </label>
+
+  <div class="row">
+    <div class="col"><label>Options (JSON) — optional
+      <textarea id="options">{"temperature":0}</textarea>
+    </label></div>
+    <div class="col">
+      <label>&nbsp;<br /><button id="send">Send</button> <button id="textOnly">Text only</button></label>
+    </div>
+  </div>
+
+  <h3>Response</h3>
+  <pre id="result">(no response yet)</pre>
+  <h3>History</h3>
+  <pre id="history">(no history)</pre>
+
+  <script>
+    const send = document.getElementById('send');
+    const result = document.getElementById('result');
+    const textOnlyBtn = document.getElementById('textOnly');
+    const historyPre = document.getElementById('history');
+
+    async function appendHistory(entry){
+      try{
+        const r = await fetch('/v1/history', { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify(entry) });
+        const json = await r.json();
+        historyPre.textContent = JSON.stringify(json, null, 2);
+      }catch(e){ console.warn('history save failed', e); }
+    }
+
+    send.addEventListener('click', async ()=>{
+      const model = document.getElementById('model').value;
+      const type = document.getElementById('type').value;
+      let input;
+      try{ input = JSON.parse(document.getElementById('input').value); }catch(e){ alert('Invalid JSON in Messages'); return }
+      let options = {};
+      try{ options = JSON.parse(document.getElementById('options').value); }catch(e){ alert('Invalid JSON in Options'); return }
+
+      result.textContent = '...loading';
+      try{
+        const r = await fetch('/v1/proxy', {
+          method: 'POST', headers: {'Content-Type':'application/json'},
+          body: JSON.stringify({ model, type, input, options })
+        });
+        const json = await r.json();
+        result.textContent = JSON.stringify(json, null, 2);
+        appendHistory({ ts: new Date().toISOString(), req: { model, type, input, options }, res: json });
+      }catch(err){
+        result.textContent = String(err);
+      }
+    });
+
+    textOnlyBtn.addEventListener('click', async ()=>{
+      const model = document.getElementById('model').value;
+      const type = document.getElementById('type').value;
+      let input;
+      try{ input = JSON.parse(document.getElementById('input').value); }catch(e){ alert('Invalid JSON in Messages'); return }
+      let options = {};
+      try{ options = JSON.parse(document.getElementById('options').value); }catch(e){ alert('Invalid JSON in Options'); return }
+      result.textContent = '...loading';
+      try{
+        const r = await fetch('/v1/proxy', {
+          method: 'POST', headers: {'Content-Type':'application/json'},
+          body: JSON.stringify({ model, type, input, options })
+        });
+        const json = await r.json();
+        // try to extract human text
+        let text = JSON.stringify(json);
+        try{
+          if(json.choices && json.choices[0]){
+            const c = json.choices[0];
+            if(c.message && c.message.content) text = c.message.content;
+            else if(c.text) text = c.text;
+            else if(json.output && Array.isArray(json.output) && json.output[0].content && json.output[0].content[0]){
+              text = json.output[0].content[0].text || JSON.stringify(json.output);
+            }
+          } else if(json.output && json.output[0] && json.output[0].content){
+            // new responses format
+            const content = json.output[0].content.find(x=>x.type==='output_text' || x.type==='message');
+            if(content) text = content.text || JSON.stringify(content);
+          }
+        }catch(e){ }
+        result.textContent = text;
+        appendHistory({ ts: new Date().toISOString(), req: { model, type, input, options }, res: { text } });
+      }catch(err){ result.textContent = String(err); }
+    });
+  </script>
+</body>
+</html>
