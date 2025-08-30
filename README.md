@@ -1,33 +1,233 @@
-# GitHub Models - Limited Public Beta
+# 🚀 OpenAI LLM Proxy Server with GitHub Models
 
-Welcome to your shiny new Codespace for interacting with GitHub Models! We've got everything fired up and ready for you to explore AI Models hosted on Azure AI.
+Повнофункціональний проксі-сервер для роботи з LLM моделями через GitHub Models API з підтримкою стандартного OpenAI API та розширеними можливостями моніторингу.
 
-The git history is a nearly-blank canvas; there's a single initial commit with the contents you're seeing right now - where you go from here is up to you!
+## ✨ Основні функції
 
-Everything you do here is contained within this one codespace. There is no repository on GitHub yet. When you’re ready, you can click "Publish Branch" and we’ll create your repository and push up your project. If you were just exploring and have no further need for this code, you can simply delete your codespace and it's gone forever.
+### �� Множинні інтерфейси
+- **Стандартний OpenAI API** - повна сумісність з екосистемою OpenAI
+- **Розширений JSON API** - додаткові можливості та налаштування
+- **Простий Chat API** - легкий у використанні інтерфейс
+- **Web UI** - інтерактивний веб-інтерфейс для тестування
 
-For more information about the Models available on GitHub Models, check out the [Marketplace](https://github.com/marketplace/models).
+### 🧠 Підтримувані моделі (23 моделі)
 
-When bringing your application to scale, you must provision resources and authenticate from Azure, not GitHub. Learn more about deploying models to meet your use case with Azure AI.
+#### OpenAI (2 моделі)
+- `gpt-4o` - Найпотужніша універсальна модель (128K контекст)
+- `gpt-4o-mini` - Швидка та ефективна модель (128K контекст)
 
-## Getting Started
+#### Microsoft (11 моделей)
+- `Phi-3-mini-4k-instruct` - Компактна модель (4K контекст)
+- `Phi-3-small-8k-instruct` - Мала модель (8K контекст) 
+- `Phi-3-small-128k-instruct` - Мала модель з великим контекстом (128K)
+- `Phi-3-medium-4k-instruct` - Середня модель (4K контекст)
+- `Phi-3-medium-128k-instruct` - Середня модель з великим контекстом (128K)
+- `Phi-3.5-mini-instruct` - Покращена міні версія (128K контекст)
+- `Phi-3.5-MoE-instruct` - Mixture of Experts модель (128K контекст)
+- `microsoft/Phi-3.5-vision-instruct` - Модель з підтримкою зображень (128K контекст)
+- `Phi-3.5-vision-instruct` - Vision модель (128K контекст)
+- `o1-mini` - Спеціалізована модель для міркувань
+- `o1-preview` - Експериментальна o1 модель
 
-There are a few basic examples that are ready for you to run. You can find them in the [samples directory](samples/README.md). If you want to jump straight to your favorite language, you can find the examples in the following directories:
+#### AI21 (1 модель)
+- `AI21-Jamba-1.5-Large` - Найбільший контекст (256K токенів)
 
-- [JavaScript](samples/js/README.md)
-- [Python](samples/python/README.md)
-- [cURL](samples/curl/README.md)
+#### Cohere (4 моделі) 
+- `Cohere-command-r-plus` - Потужна модель для складних завдань (128K контекст)
+- `Cohere-command-r` - Базова command модель (128K контекст)
+- `Cohere-command-r-08-2024` - Оновлена версія (128K контекст)
+- `Cohere-command-r-plus-08-2024` - Покращена plus версія (128K контекст)
 
-If you are already familiar with the GitHub Models service, you can start by running our Cookbook examples. You can find them in the [cookbooks directory](cookbooks/README.md). Here are the direct links to the available languages (at this point only Python):
+#### Meta (2 моделі)
+- `Meta-Llama-3.1-8B-Instruct` - Ефективна модель (128K контекст)
+- `Meta-Llama-3.1-405B-Instruct` - Найпотужніша модель (128K контекст)
 
-- [Python](cookbooks/python/README.md)
+#### Mistral (1 модель)
+- `Mistral-Nemo` - Швидка європейська модель (128K контекст)
 
-## Disclosures
+### 📊 Моніторинг та аналітика
+- **Статистика використання** - детальна інформація по кожній моделі
+- **Перевірка лімітів контексту** - автоматична валідація розміру тексту
+- **Рекомендації моделей** - AI-підбір оптимальної моделі для завдання
+- **Відстеження помилок** - автоматичне логування та аналіз помилок
+- **Метрики продуктивності** - швидкість, ефективність, використання токенів
 
-Remember when interacting with a model you are experimenting with AI, so content mistakes are possible.  
+## 🛠️ Встановлення та запуск
 
-The feature is subject to various limits (including requests per minute, requests per day, tokens per request, and concurrent requests) and is not designed for production use cases.
+### Передумови
+- Node.js 18+
+- GitHub Token з доступом до GitHub Models
 
-GitHub Models uses [Azure AI Content Safety](https://azure.microsoft.com/en-us/products/ai-services/ai-content-safety). These filters cannot be turned off as part of the GitHub Models experience. If you decide to employ models through a paid service, please configure your content filters to meet your requirements.
+### 1. Клонування та встановлення
+\`\`\`bash
+git clone https://github.com/olegkizyma/codespaces-models.git
+cd codespaces-models
+npm install
+\`\`\`
 
-This service is under GitHub’s [Pre-release Terms](https://docs.github.com/en/site-policy/github-terms/github-pre-release-license-terms). Your use of the GitHub Models is subject to the following [Product Terms](https://www.microsoft.com/licensing/terms/productoffering/MicrosoftAzure/allprograms) and [Privacy Statement](https://www.microsoft.com/licensing/terms/product/PrivacyandSecurityTerms/MCA). Content within this Repository may be subject to additional license terms.
+### 2. Налаштування
+Створіть \`.env\` файл:
+\`\`\`env
+GITHUB_TOKEN=your_github_token_here
+OPENAI_BASE_URL=https://models.github.ai/inference
+\`\`\`
+
+### 3. Запуск
+\`\`\`bash
+npm start
+\`\`\`
+
+Сервер буде доступний на http://localhost:3010
+
+## 🌐 API Endpoints
+
+### Стандартний OpenAI API
+- \`POST /v1/chat/completions\` - Стандартний чат API
+- \`GET /v1/models\` - Список доступних моделей
+
+### Розширений API
+- \`POST /v1/proxy\` - Універсальний проксі
+- \`POST /v1/simple-chat\` - Простий чат інтерфейс
+- \`GET /v1/test-model\` - Тестування моделі
+- \`GET /v1/history\` - Історія запитів
+
+### Моніторинг API
+- \`POST /v1/recommend-model\` - Рекомендації моделей
+- \`GET /v1/stats\` - Статистика використання
+- \`POST /v1/check-context\` - Перевірка лімітів контексту
+
+### Web інтерфейси
+- \`/ui\` - Головний веб-інтерфейс
+- \`/monitor\` - Інтерфейс моніторингу
+
+## 📚 Приклади використання
+
+### Стандартний OpenAI клієнт
+\`\`\`javascript
+import OpenAI from 'openai';
+
+const client = new OpenAI({
+  apiKey: 'dummy-key',
+  baseURL: 'http://localhost:3010/v1'
+});
+
+const response = await client.chat.completions.create({
+  model: 'gpt-4o-mini',
+  messages: [{ role: 'user', content: 'Привіт!' }]
+});
+\`\`\`
+
+### Простий HTTP запит
+\`\`\`bash
+curl -X POST http://localhost:3010/v1/simple-chat \\
+  -H "Content-Type: application/json" \\
+  -d '{"message": "Привіт!", "model": "gpt-4o-mini"}'
+\`\`\`
+
+### Рекомендації моделей
+\`\`\`bash
+curl -X POST http://localhost:3010/v1/recommend-model \\
+  -H "Content-Type: application/json" \\
+  -d '{
+    "speed": "high",
+    "quality": "medium", 
+    "contextSize": "large",
+    "task": "general"
+  }'
+\`\`\`
+
+## 🔧 Тестування
+
+### Тестування всіх моделей
+\`\`\`bash
+npm run test-models
+\`\`\`
+
+### Тестування лімітів
+\`\`\`bash
+npm run test-limits
+\`\`\`
+
+### Демонстрація лімітів
+\`\`\`bash
+node test-model-limits.mjs
+\`\`\`
+
+## 📋 Документація
+
+- [\`AVAILABLE_MODELS.md\`](AVAILABLE_MODELS.md) - Детальний каталог моделей
+- [\`STANDARD_OPENAI_API.md\`](STANDARD_OPENAI_API.md) - Гід по стандартному API
+- [\`API_ANALYSIS.md\`](API_ANALYSIS.md) - Технічний аналіз API
+- [\`MODEL_LIMITS_RECOMMENDATIONS.md\`](MODEL_LIMITS_RECOMMENDATIONS.md) - Ліміти та рекомендації
+
+## 🎯 Рекомендації по використанню
+
+### Для швидкості ⚡
+- \`gpt-4o-mini\` - найшвидша универсальна модель
+- \`Phi-3.5-mini-instruct\` - економна швидка модель
+
+### Для якості 🧠
+- \`Meta-Llama-3.1-405B-Instruct\` - найвища якість
+- \`gpt-4o\` - універсальна потужна модель
+
+### Для довгих текстів 📖
+- \`AI21-Jamba-1.5-Large\` - 256K контекст
+- \`Phi-3-small-128k-instruct\` - економна 128K модель
+
+### Для роботи з зображеннями ��️
+- \`microsoft/Phi-3.5-vision-instruct\` - Vision модель
+- \`gpt-4o\` - підтримує зображення
+
+## ��️ Обробка помилок
+
+Система автоматично:
+- Відстежує rate limits та пропонує оптимізації
+- Перевіряє ліміти контексту перед відправкою
+- Логує всі помилки для аналізу
+- Пропонує альтернативні моделі при помилках
+
+## 📊 Моніторинг
+
+Веб-інтерфейс моніторингу (\`/monitor\`) надає:
+- Реального часу статистику використання
+- Рекомендації по оптимізації
+- Аналіз продуктивності моделей
+- Інструменти для перевірки лімітів
+
+## 🔄 Оновлення
+
+Система регулярно тестує доступність моделей та автоматично адаптується до змін в GitHub Models API.
+
+## 📞 Підтримка
+
+При виникненні проблем:
+1. Перевірте логи сервера
+2. Використайте \`/v1/stats\` для діагностики
+3. Перевірте статус GitHub Models API
+4. Переглянуте документацію по лімітам
+
+## 🏗️ Архітектура
+
+\`\`\`
+├── server.js              # Головний сервер
+├── model-limits-utils.mjs  # Утиліти для роботи з лімітами
+├── test-model-limits.mjs   # Демонстрація лімітів
+├── public/
+│   ├── index.html         # Головний веб-інтерфейс
+│   └── monitor.html       # Інтерфейс моніторингу
+├── scripts/
+│   └── test_models.mjs    # Скрипти тестування
+└── docs/                  # Документація
+\`\`\`
+
+## 🚀 Можливості розширення
+
+- Підтримка streaming відповідей
+- Кешування популярних запитів
+- Балансування навантаження між моделями  
+- Інтеграція з іншими AI провайдерами
+- Розширена аналітика використання
+
+---
+
+**Створено для максимальної сумісності з OpenAI екосистемою при використанні GitHub Models API** 🎯
