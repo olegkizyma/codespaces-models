@@ -44,14 +44,31 @@
   <div id="advanced-tab" class="tab-content active">
 
   <label>Model ID
-    <select id="model" style="width:100%">
-      <option>openai/gpt-4o-mini</option>
-      <option>openai/gpt-4o</option>
-      <option>microsoft/Phi-3.5-mini-instruct</option>
-      <option>microsoft/Phi-3-mini-4k-instruct</option>
-      <option>AI21-Jamba-1.5-Mini</option>
-      <option>AI21-Jamba-1.5-Large</option>
-    </select>
+                <select id="model" required>
+              <option value="openai/gpt-4o-mini">openai/gpt-4o-mini</option>
+              <option value="openai/gpt-4o">openai/gpt-4o</option>
+              <option value="gpt-4o-mini">gpt-4o-mini</option>
+              <option value="gpt-4o">gpt-4o</option>
+              <option value="microsoft/Phi-3.5-mini-instruct">microsoft/Phi-3.5-mini-instruct</option>
+              <option value="microsoft/Phi-3-mini-4k-instruct">microsoft/Phi-3-mini-4k-instruct</option>
+              <option value="Phi-3.5-mini-instruct">Phi-3.5-mini-instruct</option>
+              <option value="Phi-3-mini-4k-instruct">Phi-3-mini-4k-instruct</option>
+              <option value="Phi-3-medium-4k-instruct">Phi-3-medium-4k-instruct</option>
+              <option value="microsoft/Phi-3.5-MoE-instruct">microsoft/Phi-3.5-MoE-instruct</option>
+              <option value="microsoft/Phi-3.5-vision-instruct">microsoft/Phi-3.5-vision-instruct</option>
+              <option value="microsoft/Phi-3-small-8k-instruct">microsoft/Phi-3-small-8k-instruct</option>
+              <option value="microsoft/Phi-3-small-128k-instruct">microsoft/Phi-3-small-128k-instruct</option>
+              <option value="microsoft/Phi-3-medium-4k-instruct">microsoft/Phi-3-medium-4k-instruct</option>
+              <option value="Phi-3-small-8k-instruct">Phi-3-small-8k-instruct</option>
+              <option value="Phi-3-small-128k-instruct">Phi-3-small-128k-instruct</option>
+              <option value="AI21-Jamba-1.5-Large">AI21-Jamba-1.5-Large</option>
+              <option value="AI21-Jamba-1.5-Mini">AI21-Jamba-1.5-Mini</option>
+              <option value="Cohere-command-r-08-2024">Cohere-command-r-08-2024</option>
+              <option value="Cohere-command-r-plus-08-2024">Cohere-command-r-plus-08-2024</option>
+              <option value="Meta-Llama-3.1-8B-Instruct">Meta-Llama-3.1-8B-Instruct</option>
+              <option value="Meta-Llama-3.1-405B-Instruct">Meta-Llama-3.1-405B-Instruct</option>
+              <option value="Mistral-Nemo">Mistral-Nemo</option>
+            </select>
   </label>
 
   <label>Type
@@ -79,14 +96,31 @@
 
   <div id="simple-tab" class="tab-content">
     <label>Model
-      <select id="simpleModel" style="width:100%">
-        <option>openai/gpt-4o-mini</option>
-        <option>openai/gpt-4o</option>
-        <option>microsoft/Phi-3.5-mini-instruct</option>
-        <option>microsoft/Phi-3-mini-4k-instruct</option>
-        <option>AI21-Jamba-1.5-Mini</option>
-        <option>AI21-Jamba-1.5-Large</option>
-      </select>
+                  <select id="simpleModel" required>
+              <option value="openai/gpt-4o-mini">openai/gpt-4o-mini (швидка)</option>
+              <option value="openai/gpt-4o">openai/gpt-4o (потужна)</option>
+              <option value="gpt-4o-mini">gpt-4o-mini (коротка назва)</option>
+              <option value="gpt-4o">gpt-4o (коротка назва)</option>
+              <option value="microsoft/Phi-3.5-mini-instruct">microsoft/Phi-3.5-mini-instruct (міні)</option>
+              <option value="microsoft/Phi-3-mini-4k-instruct">microsoft/Phi-3-mini-4k-instruct (міні 4K)</option>
+              <option value="Phi-3.5-mini-instruct">Phi-3.5-mini-instruct (короткий міні)</option>
+              <option value="Phi-3-mini-4k-instruct">Phi-3-mini-4k-instruct (короткий міні 4K)</option>
+              <option value="Phi-3-medium-4k-instruct">Phi-3-medium-4k-instruct (середній)</option>
+              <option value="microsoft/Phi-3.5-MoE-instruct">microsoft/Phi-3.5-MoE-instruct (експерт)</option>
+              <option value="microsoft/Phi-3.5-vision-instruct">microsoft/Phi-3.5-vision-instruct (зір)</option>
+              <option value="microsoft/Phi-3-small-8k-instruct">microsoft/Phi-3-small-8k-instruct (8K контекст)</option>
+              <option value="microsoft/Phi-3-small-128k-instruct">microsoft/Phi-3-small-128k-instruct (128K контекст)</option>
+              <option value="microsoft/Phi-3-medium-4k-instruct">microsoft/Phi-3-medium-4k-instruct (середній 4K)</option>
+              <option value="Phi-3-small-8k-instruct">Phi-3-small-8k-instruct (малий 8K)</option>
+              <option value="Phi-3-small-128k-instruct">Phi-3-small-128k-instruct (малий 128K)</option>
+              <option value="AI21-Jamba-1.5-Large">AI21-Jamba-1.5-Large (великий)</option>
+              <option value="AI21-Jamba-1.5-Mini">AI21-Jamba-1.5-Mini (компактний)</option>
+              <option value="Cohere-command-r-08-2024">Cohere-command-r-08-2024 (командний)</option>
+              <option value="Cohere-command-r-plus-08-2024">Cohere-command-r-plus-08-2024 (командний+)</option>
+              <option value="Meta-Llama-3.1-8B-Instruct">Meta-Llama-3.1-8B-Instruct (8B)</option>
+              <option value="Meta-Llama-3.1-405B-Instruct">Meta-Llama-3.1-405B-Instruct (405B найбільша!)</option>
+              <option value="Mistral-Nemo">Mistral-Nemo (немо)</option>
+            </select>
       <button class="clear-btn" id="clearChat">Clear</button>
       <button class="test-btn" id="testModel">Test Model</button>
     </label>

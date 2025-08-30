@@ -16,7 +16,10 @@
   ,
   "scripts": {
     "start": "node server.js",
-    "dev": "node server.js",
-    "test-models": "node scripts/test_models.mjs"
+    "dev": "node server.js", 
+    "test-models": "node scripts/test_models.mjs",
+    "test-limits": "node test-model-limits.mjs",
+    "test-standard-api": "node test-standard-api.mjs",
+    "demo": "node test-standard-api.mjs"
   }
 }
