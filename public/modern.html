@@ -970,10 +970,17 @@ Click "Generate Code" to create a ready-to-use example...
       const model = document.getElementById('chatModel').value;
       const container = document.getElementById('chatContainer');
       
-      if (!input.value.trim()) return;
+      console.log('sendMessage called', { inputValue: input.value, model });
+      
+      if (!input.value.trim()) {
+        console.log('Empty input, returning');
+        return;
+      }
 
       const userMessage = input.value;
       input.value = '';
+
+      console.log('Sending message:', { userMessage, model });
 
       // Add user message
       addMessage('user', userMessage);
@@ -983,6 +990,8 @@ Click "Generate Code" to create a ready-to-use example...
       addTypingIndicator(typingId);
 
       try {
+        console.log('Making fetch request to /v1/simple-chat');
+        
         const response = await fetch('/v1/simple-chat', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -992,7 +1001,10 @@ Click "Generate Code" to create a ready-to-use example...
           })
         });
 
+        console.log('Response received:', response.status, response.statusText);
+        
         const result = await response.json();
+        console.log('Response JSON:', result);
         
         // Remove typing indicator
         document.getElementById(typingId)?.remove();
@@ -1001,10 +1013,12 @@ Click "Generate Code" to create a ready-to-use example...
           addMessage('assistant', result.message);
           showNotification('Response received!', 'success');
         } else {
+          console.error('No message in response:', result);
           addMessage('error', result.error || 'Unknown error');
           showNotification('Error occurred', 'error');
         }
       } catch (error) {
+        console.error('Fetch error:', error);
         document.getElementById(typingId)?.remove();
         addMessage('error', 'Connection error: ' + error.message);
         showNotification('Connection failed', 'error');
@@ -1174,22 +1188,43 @@ Click "Generate Code" to create a ready-to-use example...
     }
 
     // Event Listeners
-    document.getElementById('sendBtn').addEventListener('click', sendMessage);
-    document.getElementById('chatInput').addEventListener('keypress', (e) => {
-      if (e.key === 'Enter') sendMessage();
-    });
-    document.getElementById('clearBtn').addEventListener('click', () => {
-      const container = document.getElementById('chatContainer');
-      container.innerHTML = `
-        <div class="message assistant">
-          <div class="message-avatar">🤖</div>
-          <div class="message-content">
-            Chat cleared! Ready for new conversation.
-            <div class="message-time">${new Date().toLocaleTimeString()}</div>
+    console.log('Setting up event listeners...');
+    
+    const sendBtn = document.getElementById('sendBtn');
+    const chatInput = document.getElementById('chatInput');
+    const clearBtn = document.getElementById('clearBtn');
+    
+    console.log('Elements found:', { sendBtn, chatInput, clearBtn });
+    
+    if (sendBtn) {
+      sendBtn.addEventListener('click', sendMessage);
+      console.log('sendBtn listener added');
+    }
+    
+    if (chatInput) {
+      chatInput.addEventListener('keypress', (e) => {
+        console.log('Key pressed:', e.key);
+        if (e.key === 'Enter') sendMessage();
+      });
+      console.log('chatInput listener added');
+    }
+    
+    if (clearBtn) {
+      clearBtn.addEventListener('click', () => {
+        console.log('Clear button clicked');
+        const container = document.getElementById('chatContainer');
+        container.innerHTML = `
+          <div class="message assistant">
+            <div class="message-avatar">🤖</div>
+            <div class="message-content">
+              Chat cleared! Ready for new conversation.
+              <div class="message-time">${new Date().toLocaleTimeString()}</div>
+            </div>
           </div>
-        </div>
-      `;
-    });
+        `;
+      });
+      console.log('clearBtn listener added');
+    }
 
     document.getElementById('testBtn').addEventListener('click', testAPI);
     document.getElementById('formatBtn').addEventListener('click', () => {
@@ -1425,7 +1460,15 @@ Click "Generate Code" to create a ready-to-use example...
     }
 
     // Initialize
-    loadModels(); // Load models first
+    document.addEventListener('DOMContentLoaded', function() {
+      console.log('DOM Content Loaded');
+      loadModels(); // Load models first
+      checkServerStatus();
+      loadSettings();
+    });
+    
+    // Load models and start checking status immediately
+    loadModels();
     checkServerStatus();
     setInterval(checkServerStatus, 30000); // Check every 30 seconds
 

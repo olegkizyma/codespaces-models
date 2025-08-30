@@ -142,7 +142,7 @@ app.post('/v1/simple-chat', async (req, res) => {
     });
 
     const reply = response.choices?.[0]?.message?.content || "No response";
-    res.send({ response: reply });
+    res.send({ message: reply });
     
   } catch (err) {
     console.error("simple chat error", err);
