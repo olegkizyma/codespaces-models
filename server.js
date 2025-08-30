@@ -14,9 +14,28 @@ app.use(express.json());
 // Serve simple static UI for testing at /ui
 app.use('/ui', express.static('public'));
 
+// Serve modern UI at root and /modern
+app.get('/', (req, res) => {
+  res.sendFile(path.join(process.cwd(), 'public', 'modern.html'));
+});
+
+app.get('/modern', (req, res) => {
+  res.sendFile(path.join(process.cwd(), 'public', 'modern.html'));
+});
+
+// Serve classic UI at /classic
+app.get('/classic', (req, res) => {
+  res.sendFile(path.join(process.cwd(), 'public', 'index.html'));
+});
+
 // Serve monitoring interface at /monitor
 app.get('/monitor', (req, res) => {
   res.sendFile(path.join(process.cwd(), 'public', 'monitor.html'));
+});
+
+// Health check endpoint
+app.get('/health', (req, res) => {
+  res.json({ status: 'ok', timestamp: new Date().toISOString(), models: 28 });
 });
 
 const OPENAI_API_KEY = process.env.OPENAI_API_KEY || process.env.GITHUB_TOKEN;
