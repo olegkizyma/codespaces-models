@@ -4,12 +4,45 @@ import fs from 'fs/promises';
 import path from 'path';
 
 const AVAILABLE_MODELS = [
+  // OpenAI Models
   'gpt-4o-mini',
-  'gpt-4o', 
+  'gpt-4o',
+  'gpt-4o-2024-08-06',
+  'gpt-4',
+  'gpt-4-turbo',
+  'gpt-3.5-turbo',
+  
+  // Microsoft Models  
+  'Phi-3-medium-128k-instruct',
+  'Phi-3-medium-4k-instruct',
+  'Phi-3-mini-128k-instruct',
+  'Phi-3-mini-4k-instruct',
+  'Phi-3-small-128k-instruct',
+  'Phi-3-small-8k-instruct',
+  'Phi-3.5-MoE-instruct',
   'Phi-3.5-mini-instruct',
-  'AI21-Jamba-1.5-Large',
+  'Phi-3.5-vision-instruct',
+  
+  // Meta Models
+  'Meta-Llama-3-70B-Instruct',
+  'Meta-Llama-3-8B-Instruct',
   'Meta-Llama-3.1-405B-Instruct',
-  'Cohere-command-r-plus'
+  'Meta-Llama-3.1-70B-Instruct',
+  'Meta-Llama-3.1-8B-Instruct',
+  
+  // Mistral Models
+  'Mistral-large',
+  'Mistral-large-2407',
+  'Mistral-Nemo',
+  'Mistral-small',
+  
+  // Cohere Models
+  'Cohere-command-r',
+  'Cohere-command-r-plus',
+  
+  // AI21 Models
+  'AI21-Jamba-1.5-Large',
+  'AI21-Jamba-1.5-Mini'
 ];
 
 class CodeGenerator {

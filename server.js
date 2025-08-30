@@ -313,5 +313,151 @@ app.post("/v1/check-context", (req, res) => {
   }
 });
 
+// Code generator endpoint
+app.post("/api/generate-code", async (req, res) => {
+  try {
+    const { language, type, model, prompt } = req.body;
+    
+    if (!language || !type) {
+      return res.status(400).json({ error: "language and type are required" });
+    }
+
+    // Import CodeGenerator dynamically
+    const { default: CodeGeneratorModule } = await import('./code-generator.mjs');
+    
+    // Create a simple generator class
+    class SimpleCodeGenerator {
+      generateBasicJS(model, prompt) {
+        return `import OpenAI from 'openai';
+
+const client = new OpenAI({
+  apiKey: 'dummy-key',
+  baseURL: 'http://localhost:3010/v1'
+});
+
+async function main() {
+  try {
+    const response = await client.chat.completions.create({
+      model: '${model || 'gpt-4o-mini'}',
+      messages: [
+        { role: 'system', content: 'You are a helpful assistant.' },
+        { role: 'user', content: '${prompt || 'Hello, world!'}' }
+      ],
+      temperature: 0.7,
+      max_tokens: 1000
+    });
+
+    console.log('✅ Response:', response.choices[0].message.content);
+    console.log('📊 Usage:', response.usage);
+  } catch (error) {
+    console.error('❌ Error:', error.message);
+  }
+}
+
+main();`;
+      }
+
+      generateBasicPython(model, prompt) {
+        return `#!/usr/bin/env python3
+
+from openai import OpenAI
+import time
+
+client = OpenAI(
+    base_url="http://localhost:3010/v1",
+    api_key="dummy-key"
+)
+
+def main():
+    model = "${model || 'gpt-4o-mini'}"
+    prompt = "${prompt || 'Hello, world!'}"
+    
+    print(f"🤖 Testing model: {model}")
+    print(f"💬 Prompt: {prompt}")
+    print("=" * 50)
+    
+    start_time = time.time()
+    
+    try:
+        response = client.chat.completions.create(
+            model=model,
+            messages=[
+                {"role": "system", "content": "You are a helpful assistant."},
+                {"role": "user", "content": prompt}
+            ],
+            temperature=0.7,
+            max_tokens=1000
+        )
+        
+        duration = time.time() - start_time
+        content = response.choices[0].message.content
+        
+        print("✅ Response received!")
+        print(f"📄 Content: {content}")
+        print(f"⏱️  Duration: {duration:.2f}s")
+        print(f"📊 Usage: {response.usage}")
+        
+    except Exception as error:
+        print(f"❌ Error: {error}")
+
+if __name__ == "__main__":
+    main()`;
+      }
+
+      generateBasicBash(model, prompt) {
+        return `#!/bin/bash
+
+MODEL="${model || 'gpt-4o-mini'}"
+PROMPT="${prompt || 'Hello, world!'}"
+
+echo "🤖 Testing model: $MODEL"
+echo "💬 Prompt: $PROMPT"
+echo "================================================"
+
+echo "📡 Using simple-chat API:"
+curl -s -X POST "http://localhost:3010/v1/simple-chat" \\
+  -H "Content-Type: application/json" \\
+  -d "{\\"message\\": \\"$PROMPT\\", \\"model\\": \\"$MODEL\\"}" | jq -r '.message // .error'
+
+echo ""
+echo "📡 Using OpenAI compatible API:"
+curl -s -X POST "http://localhost:3010/v1/chat/completions" \\
+  -H "Content-Type: application/json" \\
+  -d "{
+    \\"model\\": \\"$MODEL\\",
+    \\"messages\\": [
+      {\\"role\\": \\"system\\", \\"content\\": \\"You are a helpful assistant.\\"},
+      {\\"role\\": \\"user\\", \\"content\\": \\"$PROMPT\\"}
+    ],
+    \\"temperature\\": 0.7,
+    \\"max_tokens\\": 1000
+  }" | jq '.choices[0].message.content // .error'`;
+      }
+
+      generateCode(type, language, options = {}) {
+        const { model, prompt } = options;
+        
+        switch (language) {
+          case 'js':
+            return this.generateBasicJS(model, prompt);
+          case 'python':
+            return this.generateBasicPython(model, prompt);
+          case 'bash':
+            return this.generateBasicBash(model, prompt);
+          default:
+            throw new Error(`Unknown language: ${language}`);
+        }
+      }
+    }
+
+    const generator = new SimpleCodeGenerator();
+    const code = generator.generateCode(type, language, { model, prompt });
+    
+    res.json({ code });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
 const port = process.env.PORT || 3010;
 app.listen(port, () => console.log(`OpenAI proxy listening on ${port}`));

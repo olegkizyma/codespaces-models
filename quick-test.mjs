@@ -9,12 +9,30 @@ import OpenAI from 'openai';
 import readline from 'readline';
 
 const MODELS = [
+  // OpenAI Models (наипопулярніші)
   'gpt-4o-mini',
   'gpt-4o',
-  'Phi-3.5-mini-instruct', 
-  'AI21-Jamba-1.5-Large',
+  'gpt-4o-2024-08-06', 
+  'gpt-4-turbo',
+  
+  // Microsoft Phi Models (ефективні)
+  'Phi-3.5-mini-instruct',
+  'Phi-3.5-MoE-instruct',
+  'Phi-3-medium-128k-instruct',
+  'Phi-3.5-vision-instruct',
+  
+  // Meta LLaMA Models (потужні)
   'Meta-Llama-3.1-405B-Instruct',
-  'Cohere-command-r-plus'
+  'Meta-Llama-3.1-70B-Instruct', 
+  'Meta-Llama-3.1-8B-Instruct',
+  
+  // Mistral Models (європейські)
+  'Mistral-large-2407',
+  'Mistral-Nemo',
+  
+  // Cohere & AI21 (спеціалізовані)
+  'Cohere-command-r-plus',
+  'AI21-Jamba-1.5-Large'
 ];
 
 const PROMPTS = [

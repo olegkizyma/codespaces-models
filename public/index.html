@@ -39,6 +39,7 @@
   <div class="tabs">
     <button class="tab active" onclick="showTab('advanced')">Advanced</button>
     <button class="tab" onclick="showTab('simple')">Simple Chat</button>
+    <button class="tab" onclick="showTab('tools')">🛠️ Code Generator</button>
   </div>
 
   <div id="advanced-tab" class="tab-content active">
@@ -134,6 +135,78 @@
       <div style="flex:0">
         <button id="simpleSend" style="padding:0.5rem 1rem">Send</button>
       </div>
+    </div>
+  </div>
+
+  <!-- Tools Tab -->
+  <div id="tools-tab" class="tab-content">
+    <h2>🛠️ Code Generator</h2>
+    <p>Generate ready-to-use code examples for different programming languages and scenarios.</p>
+    
+    <div class="row">
+      <div class="col">
+        <label>Programming Language
+          <select id="codeLanguage" required>
+            <option value="js">JavaScript (Node.js)</option>
+            <option value="python">Python</option>
+            <option value="bash">Shell/Bash</option>
+          </select>
+        </label>
+        
+        <label>Code Type
+          <select id="codeType" required>
+            <option value="basic">Basic Chat Example</option>
+            <option value="interactive">Interactive Chat</option>
+            <option value="benchmark">Performance Benchmark</option>
+          </select>
+        </label>
+        
+        <label>Model to Use
+          <select id="codeModel" required>
+            <option value="gpt-4o-mini">gpt-4o-mini (fastest)</option>
+            <option value="gpt-4o">gpt-4o (powerful)</option>
+            <option value="Phi-3.5-mini-instruct">Phi-3.5-mini-instruct</option>
+            <option value="AI21-Jamba-1.5-Large">AI21-Jamba-1.5-Large</option>
+            <option value="Meta-Llama-3.1-70B-Instruct">Meta-Llama-3.1-70B-Instruct</option>
+            <option value="Cohere-command-r-plus">Cohere-command-r-plus</option>
+          </select>
+        </label>
+        
+        <label>Custom Prompt (optional)
+          <input id="codePrompt" placeholder="e.g., Write a joke about programming" style="width:100%; padding:0.5rem" />
+        </label>
+        
+        <div style="margin-top: 1rem;">
+          <button id="generateCode" style="background: #28a745; color: white; border: none; padding: 0.75rem 1.5rem; border-radius: 4px; cursor: pointer; margin-right: 0.5rem;">
+            🚀 Generate Code
+          </button>
+          <button id="downloadCode" style="background: #17a2b8; color: white; border: none; padding: 0.75rem 1rem; border-radius: 4px; cursor: pointer;">
+            💾 Download
+          </button>
+        </div>
+      </div>
+    </div>
+    
+    <div style="margin-top: 2rem;">
+      <h3>Generated Code:</h3>
+      <pre id="codeOutput" style="background: #f8f9fa; border: 1px solid #dee2e6; padding: 1rem; min-height: 200px; white-space: pre-wrap; font-family: 'Courier New', monospace;">
+Click "Generate Code" to create a ready-to-use example...
+      </pre>
+    </div>
+    
+    <div style="margin-top: 1rem; background: #e7f3ff; padding: 1rem; border-radius: 4px;">
+      <h4>💡 Quick Tips:</h4>
+      <ul style="margin: 0.5rem 0; padding-left: 1.5rem;">
+        <li><strong>JavaScript:</strong> Ready for Node.js, includes error handling</li>
+        <li><strong>Python:</strong> Includes timing and usage statistics</li>
+        <li><strong>Shell:</strong> Uses curl with both simple and OpenAI APIs</li>
+        <li><strong>Download:</strong> Get the code as a file to run locally</li>
+      </ul>
+      
+      <p style="margin: 0.5rem 0;"><strong>Terminal Usage:</strong></p>
+      <code style="background: #2d3748; color: #e2e8f0; padding: 0.25rem 0.5rem; border-radius: 3px;">
+        node code-generator.mjs basic js gpt-4o-mini "Your prompt here"
+      </code>
     </div>
   </div>
 
@@ -299,6 +372,51 @@
         result.textContent = text;
         appendHistory({ ts: new Date().toISOString(), req: { model, type, input, options }, res: { text } });
       }catch(err){ result.textContent = String(err); }
+    });
+
+    // Code Generator Tab
+    document.getElementById('generateCode').addEventListener('click', async () => {
+      const language = document.getElementById('codeLanguage').value;
+      const type = document.getElementById('codeType').value;
+      const model = document.getElementById('codeModel').value;
+      const prompt = document.getElementById('codePrompt').value || 'Hello, world!';
+      
+      const output = document.getElementById('codeOutput');
+      output.textContent = 'Generating...';
+      
+      try {
+        const response = await fetch('/api/generate-code', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ language, type, model, prompt })
+        });
+        
+        const result = await response.json();
+        if (result.error) {
+          output.textContent = result.error;
+        } else {
+          output.textContent = result.code;
+        }
+      } catch (error) {
+        output.textContent = 'Error: ' + error.message;
+      }
+    });
+
+    document.getElementById('downloadCode').addEventListener('click', () => {
+      const code = document.getElementById('codeOutput').textContent;
+      const language = document.getElementById('codeLanguage').value;
+      const type = document.getElementById('codeType').value;
+      
+      const extensions = { js: 'mjs', python: 'py', bash: 'sh' };
+      const filename = `generated-${type}.${extensions[language] || 'txt'}`;
+      
+      const blob = new Blob([code], { type: 'text/plain' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = filename;
+      a.click();
+      URL.revokeObjectURL(url);
     });
   </script>
 </body>
