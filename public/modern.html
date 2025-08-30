@@ -524,6 +524,14 @@
       color: var(--text-muted);
       font-size: 0.875rem;
     }
+
+    .model-id {
+      font-size: 0.75rem;
+      color: var(--text-muted);
+      margin-top: 0.5rem;
+      font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
+      opacity: 0.7;
+    }
   </style>
 </head>
 <body>
@@ -537,11 +545,11 @@
         </div>
         <div class="stats">
           <div class="stat">
-            <div class="stat-number">28</div>
+            <div class="stat-number" id="models-count">0</div>
             <div class="stat-label">Models</div>
           </div>
           <div class="stat">
-            <div class="stat-number">6</div>
+            <div class="stat-number" id="providers-count">6</div>
             <div class="stat-label">Providers</div>
           </div>
           <div class="stat">
@@ -1274,7 +1282,150 @@ Click "Generate Code" to create a ready-to-use example...
       }
     });
 
+    // Load Models Dynamically
+    async function loadModels() {
+      try {
+        const response = await fetch('/v1/models');
+        const data = await response.json();
+        
+        if (data.data && data.data.length > 0) {
+          updateModelsDisplay(data.data);
+          updateModelSelectors(data.data);
+          
+          // Update models count in header
+          document.getElementById('models-count').textContent = data.data.length;
+          
+          // Update providers count
+          const providers = new Set(data.data.map(model => {
+            if (model.id.includes('openai') || model.id.includes('gpt')) return 'OpenAI';
+            if (model.id.includes('microsoft') || model.id.includes('Phi')) return 'Microsoft';
+            if (model.id.includes('Meta') || model.id.includes('Llama')) return 'Meta';
+            if (model.id.includes('AI21') || model.id.includes('Jamba')) return 'AI21';
+            if (model.id.includes('Cohere') || model.id.includes('command')) return 'Cohere';
+            if (model.id.includes('Mistral')) return 'Mistral';
+            return 'Other';
+          }));
+          document.getElementById('providers-count').textContent = providers.size;
+        }
+      } catch (error) {
+        console.error('Error loading models:', error);
+      }
+    }
+
+    function updateModelsDisplay(models) {
+      const openaiSection = document.querySelector('.card:nth-child(1)');
+      const microsoftSection = document.querySelector('.card:nth-child(2)');
+      const metaSection = document.querySelector('.card:nth-child(3)');
+
+      // Clear existing model cards
+      openaiSection.querySelectorAll('.model-card').forEach(el => el.remove());
+      microsoftSection.querySelectorAll('.model-card').forEach(el => el.remove());
+      metaSection.querySelectorAll('.model-card').forEach(el => el.remove());
+
+      models.forEach(model => {
+        const modelCard = createModelCard(model);
+        
+        if (model.id.includes('openai') || model.id.includes('gpt')) {
+          openaiSection.appendChild(modelCard);
+        } else if (model.id.includes('microsoft') || model.id.includes('Phi')) {
+          microsoftSection.appendChild(modelCard);
+        } else {
+          metaSection.appendChild(modelCard);
+        }
+      });
+    }
+
+    function createModelCard(model) {
+      const card = document.createElement('div');
+      card.className = 'model-card';
+      
+      const name = model.id.split('/').pop() || model.id;
+      const description = getModelDescription(model.id);
+      
+      card.innerHTML = `
+        <div class="model-name">${name}</div>
+        <div class="model-description">${description}</div>
+        <div class="model-id" style="font-size: 0.75rem; color: var(--text-muted); margin-top: 0.5rem;">${model.id}</div>
+      `;
+      
+      return card;
+    }
+
+    function getModelDescription(modelId) {
+      const descriptions = {
+        'gpt-4o-mini': 'Fast and cost-effective',
+        'gpt-4o': 'Most capable multimodal model',
+        'gpt-4o-2024-08-06': 'Latest GPT-4o version',
+        'Phi-3.5-mini-instruct': 'Compact and efficient',
+        'Phi-3.5-vision-instruct': 'Multimodal capabilities',
+        'Phi-3.5-MoE-instruct': 'Mixture of Experts',
+        'Phi-3-mini-4k-instruct': 'Mini with 4K context',
+        'Phi-3-small-8k-instruct': 'Small with 8K context',
+        'Phi-3-small-128k-instruct': 'Small with 128K context',
+        'Phi-3-medium-4k-instruct': 'Medium with 4K context',
+        'Meta-Llama-3.1-405B-Instruct': 'Largest open model',
+        'Meta-Llama-3.1-8B-Instruct': 'Efficient open model',
+        'AI21-Jamba-1.5-Large': 'Advanced reasoning',
+        'AI21-Jamba-1.5-Mini': 'Compact reasoning',
+        'Cohere-command-r-08-2024': 'Command R latest',
+        'Cohere-command-r-plus-08-2024': 'Command R+ flagship',
+        'Mistral-Nemo': 'European excellence',
+        'Mistral-Large-2407': 'Mistral flagship'
+      };
+      
+      return descriptions[modelId] || 'Advanced language model';
+    }
+
+    function updateModelSelectors(models) {
+      const selectors = ['chatModel', 'playgroundModel', 'codeModel'];
+      
+      selectors.forEach(selectorId => {
+        const select = document.getElementById(selectorId);
+        if (select) {
+          // Keep current selection
+          const currentValue = select.value;
+          
+          // Clear and rebuild options
+          select.innerHTML = '';
+          
+          models.forEach(model => {
+            const option = document.createElement('option');
+            option.value = model.id;
+            option.textContent = getModelDisplayName(model.id);
+            select.appendChild(option);
+          });
+          
+          // Restore selection if still available
+          if (currentValue && [...select.options].some(opt => opt.value === currentValue)) {
+            select.value = currentValue;
+          }
+        }
+      });
+    }
+
+    function getModelDisplayName(modelId) {
+      const displayNames = {
+        'gpt-4o-mini': '🚀 GPT-4o Mini (Fast & Efficient)',
+        'gpt-4o': '🧠 GPT-4o (Most Capable)',
+        'gpt-4o-2024-08-06': '⚡ GPT-4o Latest',
+        'Phi-3.5-mini-instruct': '🔬 Phi-3.5 Mini (Microsoft)',
+        'Phi-3.5-vision-instruct': '👁️ Phi-3.5 Vision (Microsoft)',
+        'Phi-3.5-MoE-instruct': '🧠 Phi-3.5 MoE (Microsoft)',
+        'Meta-Llama-3.1-405B-Instruct': '🦙 LLaMA 3.1 405B (Meta)',
+        'Meta-Llama-3.1-8B-Instruct': '🦙 LLaMA 3.1 8B (Meta)',
+        'AI21-Jamba-1.5-Large': '🔮 Jamba 1.5 Large (AI21)',
+        'AI21-Jamba-1.5-Mini': '🔮 Jamba 1.5 Mini (AI21)',
+        'Cohere-command-r-08-2024': '⚡ Command R (Cohere)',
+        'Cohere-command-r-plus-08-2024': '🚀 Command R+ (Cohere)',
+        'Mistral-Nemo': '🌟 Mistral Nemo',
+        'Mistral-Large-2407': '🌟 Mistral Large'
+      };
+      
+      return displayNames[modelId] || `📝 ${modelId}`;
+    }
+
     // Initialize
+    loadModels(); // Load models first
     checkServerStatus();
     setInterval(checkServerStatus, 30000); // Check every 30 seconds
 
