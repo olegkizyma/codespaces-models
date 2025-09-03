@@ -540,6 +540,7 @@ app.post('/v1/completions', async (req, res) => {
     });
   }
 });
+} // end of non-strict endpoints
 
 // Standard OpenAI API endpoint - FULL COMPATIBILITY
 async function handleChatCompletions(req, res) {
@@ -667,9 +668,10 @@ async function handleChatCompletions(req, res) {
   }
 }
 
-app.post('/v1/chat/completions', handleChatCompletions);
-// Alias for compatibility with UIs expecting /api/* paths
-app.post('/api/chat/completions', handleChatCompletions);
+// Alias for compatibility with UIs expecting /api/* paths (only in non-strict mode)  
+if (!STRICT_OPENAI_API) {
+  app.post('/api/chat/completions', handleChatCompletions);
+}
 
 // OpenAI Models endpoint - list available models
 async function handleModelsList(req, res) {
@@ -936,7 +938,6 @@ curl -s -X POST "http://localhost:3010/v1/chat/completions" \\
   }
 });
 
-} // end of non-strict endpoints
 
 // Standard OpenAI endpoints always available (including in strict mode)
 app.post('/v1/chat/completions', handleChatCompletions);

@@ -1,1 +1,42 @@
 OpenAI proxy listening on 3010
+file:///Users/dev/Documents/NIMDA/codespaces-models/server.js:943
+app.post('/v1/chat/completions', handleChatCompletions);
+                                 ^
+
+ReferenceError: handleChatCompletions is not defined
+    at file:///Users/dev/Documents/NIMDA/codespaces-models/server.js:943:34
+    at ModuleJob.run (node:internal/modules/esm/module_job:371:25)
+    at async onImport.tracePromise.__proto__ (node:internal/modules/esm/loader:669:26)
+    at async asyncRunEntryPointWithESMLoader (node:internal/modules/run_main:101:5)
+
+Node.js v24.6.0
+file:///Users/dev/Documents/NIMDA/codespaces-models/server.js:941
+} // end of non-strict endpoints
+^
+
+SyntaxError: Unexpected token '}'
+    at compileSourceTextModule (node:internal/modules/esm/utils:357:16)
+    at ModuleLoader.moduleStrategy (node:internal/modules/esm/translators:108:18)
+    at #translate (node:internal/modules/esm/loader:550:12)
+    at ModuleLoader.loadAndTranslate (node:internal/modules/esm/loader:597:27)
+    at async #link (node:internal/modules/esm/module_job:180:19)
+
+Node.js v24.6.0
+OpenAI proxy listening on 3010
+[OPENAI-STD] Models list request
+[OPENAI-STD] Models list request
+[OPENAI-STD] Chat completions request for model: "microsoft/phi-3-mini-4k-instruct"
+OpenAI proxy listening on 3010
+[OPENAI-STD] Models list request
+[OPENAI-STD] Models list request
+[OPENAI-STD] Models list request
+OpenAI proxy listening on 3010
+[OPENAI-STD] Models list request
+[OPENAI-STD] Models list request
+OpenAI proxy listening on 3010
+[OPENAI-STD] Models list request
+OpenAI proxy listening on 3010
+[OPENAI-STD] Models list request
+OpenAI proxy listening on 3010
+[OPENAI-STD] Models list request
+[OPENAI-STD] Models list request

@@ -29,13 +29,20 @@ RED = \033[0;31m
 BLUE = \033[0;34m
 NC = \033[0m # No Color
 
-.PHONY: chat stop restart status logs test models install clean help
+.PHONY: chat stop restart status logs test models install clean help openai models-json models-count install-openai install-all install-stop
 
 # Основна команда - запустити чат
 chat: require-deps
 	@echo "$(BLUE)🔄 Запуск AI чату на порту $(PORT)...$(NC)"
 	@$(MAKE) -s stop-if-running
 	@$(MAKE) -s start-server
+	@$(MAKE) -s wait-health
+
+# Строгий OpenAI API режим (без TTS та веб-інтерфейсу)
+openai: require-deps
+	@echo "$(BLUE)🔄 Запуск строгого OpenAI API на порту $(PORT)...$(NC)"
+	@$(MAKE) -s stop-all-services
+	@$(MAKE) -s start-openai-server
 	@$(MAKE) -s wait-health
 
 # Зупинити сервер
@@ -156,6 +163,29 @@ models:
 		python3 -c "import json,sys; data=json.load(sys.stdin); [print(f\"  {m['owned_by'].upper()}: {m['id']}\") for m in data['data']]" 2>/dev/null || \
 		echo "$(YELLOW)⚠️  Не вдалося отримати список моделей. Чи запущений сервер?$(NC)"
 
+# Показати моделі у JSON форматі
+models-json:
+	@echo "$(BLUE)🤖 Список моделей (JSON):$(NC)"
+	@curl -s -X GET "http://127.0.0.1:$(PORT)/v1/models" \
+		-H "Authorization: Bearer dummy-key" | \
+		python3 -m json.tool || \
+		echo "$(YELLOW)⚠️  Не вдалося отримати список моделей. Чи запущений сервер?$(NC)"
+
+# Підрахувати кількість доступних моделей
+models-count:
+	@echo "$(BLUE)🤖 Кількість доступних моделей:$(NC)"
+	@count=$$(curl -s -X GET "http://127.0.0.1:$(PORT)/v1/models" \
+		-H "Authorization: Bearer dummy-key" | \
+		python3 -c "import json,sys; data=json.load(sys.stdin); print(len(data['data']))" 2>/dev/null); \
+	if [ -n "$$count" ]; then \
+		echo "$(GREEN)✅ Загалом доступно: $$count моделей$(NC)"; \
+		curl -s -X GET "http://127.0.0.1:$(PORT)/v1/models" \
+			-H "Authorization: Bearer dummy-key" | \
+			python3 -c "import json,sys; data=json.load(sys.stdin); providers={}; [providers.update({m['owned_by']: providers.get(m['owned_by'], 0) + 1}) for m in data['data']]; [print(f\"  📊 {p.upper()}: {c} моделей\") for p,c in sorted(providers.items())]" 2>/dev/null; \
+	else \
+		echo "$(YELLOW)⚠️  Не вдалося отримати список моделей. Чи запущений сервер?$(NC)"; \
+	fi
+
 # Встановити глобально
 install:
 	@echo "$(BLUE)🔧 Встановлення глобального доступу...$(NC)"
@@ -168,6 +198,41 @@ install:
 	@chmod +x /tmp/aichat
 	@sudo mv /tmp/aichat /usr/local/bin/aichat
 	@echo "$(GREEN)✅ Встановлено! Тепер можна використовувати команду 'aichat' з будь-якої папки$(NC)"
+
+# Встановити глобальну команду для строгого OpenAI API
+install-openai:
+	@echo "$(BLUE)🔧 Встановлення глобального OpenAI API доступу...$(NC)"
+	@if [ ! -d "/usr/local/bin" ]; then \
+		echo "$(RED)❌ /usr/local/bin не існує$(NC)"; \
+		exit 1; \
+	fi
+	@echo '#!/usr/bin/env bash' > /tmp/ai-openai
+	@echo 'cd "$(SCRIPT_DIR)" && make openai "$$@"' >> /tmp/ai-openai
+	@chmod +x /tmp/ai-openai
+	@sudo mv /tmp/ai-openai /usr/local/bin/ai-openai
+	@echo "$(GREEN)✅ Встановлено! Тепер можна використовувати команду 'ai-openai' з будь-якої папки$(NC)"
+	@echo "$(BLUE)📋 Використання: ai-openai$(NC)"
+	@echo "$(BLUE)🌐 Запустить строгий OpenAI API на http://127.0.0.1:$(PORT)$(NC)"
+
+# Встановити глобальну команду для зупинення сервера
+install-stop:
+	@echo "$(BLUE)🔧 Встановлення глобальної команди зупинення...$(NC)"
+	@if [ ! -d "/usr/local/bin" ]; then \
+		echo "$(RED)❌ /usr/local/bin не існує$(NC)"; \
+		exit 1; \
+	fi
+	@echo '#!/usr/bin/env bash' > /tmp/ai-stop
+	@echo 'cd "$(SCRIPT_DIR)" && make stop "$$@"' >> /tmp/ai-stop
+	@chmod +x /tmp/ai-stop
+	@sudo mv /tmp/ai-stop /usr/local/bin/ai-stop
+	@echo "$(GREEN)✅ Встановлено! Тепер можна використовувати команду 'ai-stop' з будь-якої папки$(NC)"
+
+# Встановити всі глобальні команди
+install-all: install install-openai install-stop
+	@echo "$(GREEN)✅ Усі команди встановлено:$(NC)"
+	@echo "  $(BLUE)🎨 aichat$(NC) - повний чат з TTS та веб-інтерфейсом"
+	@echo "  $(BLUE)🤖 ai-openai$(NC) - строгий OpenAI API без додаткових сервісів"
+	@echo "  $(BLUE)🛑 ai-stop$(NC) - зупинення сервера з будь-якої папки"
 	@echo "$(BLUE)💡 Приклади:$(NC)"
 	@echo "  aichat            # запустити на порту 3010"
 	@echo "  aichat PORT=3011  # запустити на порту 3011"
@@ -185,15 +250,29 @@ help:
 	@echo "$(YELLOW)Доступні команди:$(NC)"
 	@echo "  make chat          Запустити чат сервер (за замовчуванням порт 3010)"
 	@echo "  make chat PORT=N   Запустити на вказаному порту"
+	@echo "  make openai        Строгий OpenAI API (без TTS та веб-інтерфейсу)"
 	@echo "  make stop          Зупинити сервер"
 	@echo "  make restart       Перезапустити сервер"
 	@echo "  make status        Перевірити статус сервера"
 	@echo "  make logs          Показати логи сервера"
 	@echo "  make test          Швидкий тест API"
 	@echo "  make models        Показати список доступних AI моделей"
-	@echo "  make install       Встановити глобально (команда 'aichat')"
+	@echo "  make models-json   Показати моделі у JSON форматі"
+	@echo "  make models-count  Підрахувати кількість моделей за провайдерами"
+	@echo "  make install       Встановити 'aichat' глобально"
+	@echo "  make install-openai Встановити 'ai-openai' глобально"
+	@echo "  make install-all   Встановити обидві глобальні команди"
 	@echo "  make clean         Очистити тимчасові файли"
 	@echo "  make help          Показати цю довідку"
+	@echo ""
+	@echo "$(YELLOW)Режими роботи:$(NC)"
+	@echo "  🌐 chat    - Повнофункціональний з веб-інтерфейсом та TTS"
+	@echo "  🤖 openai  - Тільки OpenAI API endpoints (/v1/models, /v1/chat/completions)"
+	@echo ""
+	@echo "$(YELLOW)Глобальні команди (після install):$(NC)"
+	@echo "  aichat       - Запуск повного чату з будь-якої папки"
+	@echo "  ai-openai    - Запуск строгого OpenAI API з будь-якої папки"  
+	@echo "  ai-stop      - Зупинення сервера з будь-якої папки"
 	@echo ""
 	@echo "$(YELLOW)Підтримувані моделі:$(NC)"
 	@echo "  🤖 OpenAI: gpt-4o, gpt-4o-mini"
@@ -247,20 +326,61 @@ start-server:
 		echo "$(GREEN)✅ Запущено з PID $$(cat $(PID_FILE))$(NC)"; \
 	fi
 
+# Зупинити всі сервіси (сервер, ngrok, TTS)
+stop-all-services:
+	@echo "$(YELLOW)🛑 Зупиняю всі сервіси...$(NC)"
+	@# Зупиняємо основний сервер
+	@$(MAKE) -s stop-if-running
+	@# Зупиняємо ngrok
+	@ngrok_pids=$$(pgrep -f ngrok 2>/dev/null || true); \
+	if [ -n "$$ngrok_pids" ]; then \
+		echo "$(YELLOW)🔌 Зупиняю ngrok: $$ngrok_pids$(NC)"; \
+		kill $$ngrok_pids 2>/dev/null || true; \
+		sleep 2; \
+	fi
+	@# Зупиняємо TTS сервіс (порт 8080)
+	@tts_pids=$$(lsof -t -nP -iTCP:8080 -sTCP:LISTEN 2>/dev/null || true); \
+	if [ -n "$$tts_pids" ]; then \
+		echo "$(YELLOW)🔊 Зупиняю TTS сервіс: $$tts_pids$(NC)"; \
+		kill $$tts_pids 2>/dev/null || true; \
+		sleep 2; \
+	fi
+	@echo "$(GREEN)✅ Всі сервіси зупинено$(NC)"
+
+# Запустити сервер в строгому OpenAI API режимі
+start-openai-server:
+	@echo "$(BLUE)🚀 Запускаю строгий OpenAI API сервер на порту $(PORT)...$(NC)"
+	@cd "$(SCRIPT_DIR)" && nohup env PORT="$(PORT)" STRICT_OPENAI_API=1 ENABLE_TTS_PROXY=0 node server.js >> "$(LOG_FILE)" 2>&1 & echo $$! > "$(PID_FILE)"
+	@if [ -f "$(PID_FILE)" ]; then \
+		echo "$(GREEN)✅ Запущено з PID $$(cat $(PID_FILE)) (строгий режим)$(NC)"; \
+	fi
+
 wait-health:
 	@echo "$(BLUE)🔍 Перевіряю готовність сервера...$(NC)"
 	@attempts=$(MAX_WAIT_HEALTH); \
 	health_url="http://127.0.0.1:$(PORT)$(HEALTH_PATH)"; \
 	simple_url="http://127.0.0.1:$(PORT)$(SIMPLE_CHAT_PATH)"; \
+	models_url="http://127.0.0.1:$(PORT)/v1/models"; \
 	for i in $$(seq 1 $$attempts); do \
 		if curl -fsS --max-time 3 "$$health_url" >/dev/null 2>&1; then \
 			echo "$(GREEN)✅ Health OK$(NC)"; \
 			if curl -fsS --max-time 3 "$$simple_url" >/dev/null 2>&1; then \
 				echo "$(GREEN)✅ Simple chat OK$(NC)"; \
+				echo ""; \
+				echo "$(GREEN)🎉 Сервер готовий!$(NC)"; \
+				echo "$(BLUE)🌐 Простий чат з усіма 24 моделями: http://127.0.0.1:$(PORT)$(NC)"; \
+			elif curl -fsS --max-time 3 -H "Authorization: Bearer dummy-key" "$$models_url" >/dev/null 2>&1; then \
+				echo "$(GREEN)✅ OpenAI API OK$(NC)"; \
+				echo ""; \
+				echo "$(GREEN)🎉 Строгий OpenAI API сервер готовий!$(NC)"; \
+				echo "$(BLUE)🤖 Доступні endpoint'и:$(NC)"; \
+				echo "$(BLUE)  • GET  /v1/models$(NC)"; \
+				echo "$(BLUE)  • POST /v1/chat/completions$(NC)"; \
+				echo "$(BLUE)  • GET  /health$(NC)"; \
+				echo "$(YELLOW)⚠️   TTS та веб-інтерфейс відключені$(NC)"; \
+			else \
+				echo "$(GREEN)✅ Сервер готовий!$(NC)"; \
 			fi; \
-			echo ""; \
-			echo "$(GREEN)🎉 Сервер готовий!$(NC)"; \
-			echo "$(BLUE)🌐 Простий чат з усіма 24 моделями: http://127.0.0.1:$(PORT)$(NC)"; \
 			echo "$(BLUE)🤖 Підтримка OpenAI, Microsoft, AI21, Cohere, Meta, Mistral$(NC)"; \
 			exit 0; \
 		fi; \
