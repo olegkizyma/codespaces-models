@@ -811,3 +811,244 @@ OpenAI standard API error NotFoundError: 404 Unknown model: /Mistral-small
 [OPENAI-STD] Models list request
 [OPENAI-STD] Models list request
 [OPENAI-STD] Models list request
+[OPENAI-STD] Chat completions request for model: "xai/grok-3"
+[OPENAI-STD] Chat completions request for model: "openai/gpt-4.1"
+[OPENAI-STD] Chat completions request for model: "openai/gpt-5"
+OpenAI standard API error BadRequestError: 400 Unavailable model: gpt-5
+    at APIError.generate (file:///Users/dev/Documents/NIMDA/codespaces-models/node_modules/openai/error.mjs:41:20)
+    at OpenAI.makeStatusError (file:///Users/dev/Documents/NIMDA/codespaces-models/node_modules/openai/core.mjs:268:25)
+    at OpenAI.makeRequest (file:///Users/dev/Documents/NIMDA/codespaces-models/node_modules/openai/core.mjs:311:30)
+    at process.processTicksAndRejections (node:internal/process/task_queues:105:5)
+    at async file:///Users/dev/Documents/NIMDA/codespaces-models/server.js:258:22 {
+  status: 400,
+  headers: {
+    'azureml-served-by-cluster': 'vienna-eastus2-02',
+    'content-length': '112',
+    'content-type': 'application/json; charset=utf-8',
+    date: 'Wed, 03 Sep 2025 00:22:13 GMT',
+    'request-context': 'appId=',
+    server: 'github.com',
+    'strict-transport-security': 'max-age=31536000; includeSubDomains; preload',
+    vary: 'Origin',
+    'x-content-type-options': 'nosniff',
+    'x-github-backend': 'Kubernetes',
+    'x-github-request-id': 'FC8C:DAD2E:3A6C9C:4E20C0:68B78A35',
+    'x-ms-error-code': 'unavailable_model',
+    'x-request-time': '0.020'
+  },
+  request_id: undefined,
+  error: {
+    code: 'unavailable_model',
+    message: 'Unavailable model: gpt-5',
+    details: 'Unavailable model: gpt-5'
+  },
+  code: 'unavailable_model',
+  param: undefined,
+  type: undefined
+}
+[OPENAI-STD] Chat completions request for model: "openai/o1"
+OpenAI standard API error PermissionDeniedError: 403 status code (no body)
+    at APIError.generate (file:///Users/dev/Documents/NIMDA/codespaces-models/node_modules/openai/error.mjs:47:20)
+    at OpenAI.makeStatusError (file:///Users/dev/Documents/NIMDA/codespaces-models/node_modules/openai/core.mjs:268:25)
+    at OpenAI.makeRequest (file:///Users/dev/Documents/NIMDA/codespaces-models/node_modules/openai/core.mjs:311:30)
+    at process.processTicksAndRejections (node:internal/process/task_queues:105:5)
+    at async file:///Users/dev/Documents/NIMDA/codespaces-models/server.js:258:22 {
+  status: 403,
+  headers: {
+    'content-length': '0',
+    date: 'Wed, 03 Sep 2025 00:22:27 GMT',
+    server: 'github.com',
+    vary: 'Origin',
+    'x-github-backend': 'Kubernetes',
+    'x-github-request-id': 'FC90:1A1516:1284E8:19CB1C:68B78A43'
+  },
+  request_id: undefined,
+  error: undefined,
+  code: undefined,
+  param: undefined,
+  type: undefined
+}
+[OPENAI-STD] Chat completions request for model: "microsoft/phi-4"
+[OPENAI-STD] Chat completions request for model: "deepseek/deepseek-r1"
+[OPENAI-STD] Models list request
+[OPENAI-STD] Chat completions request for model: "openai/gpt-4.1"
+[OPENAI-STD] Chat completions request for model: "xai/grok-3"
+[OPENAI-STD] Chat completions request for model: "deepseek/deepseek-r1"
+[OPENAI-STD] Chat completions request for model: "microsoft/phi-4"
+[OPENAI-STD] Chat completions request for model: "openai/gpt-5"
+OpenAI standard API error BadRequestError: 400 Unavailable model: gpt-5
+    at APIError.generate (file:///Users/dev/Documents/NIMDA/codespaces-models/node_modules/openai/error.mjs:41:20)
+    at OpenAI.makeStatusError (file:///Users/dev/Documents/NIMDA/codespaces-models/node_modules/openai/core.mjs:268:25)
+    at OpenAI.makeRequest (file:///Users/dev/Documents/NIMDA/codespaces-models/node_modules/openai/core.mjs:311:30)
+    at process.processTicksAndRejections (node:internal/process/task_queues:105:5)
+    at async file:///Users/dev/Documents/NIMDA/codespaces-models/server.js:258:22 {
+  status: 400,
+  headers: {
+    'azureml-served-by-cluster': 'vienna-eastus2-01',
+    'content-length': '112',
+    'content-type': 'application/json; charset=utf-8',
+    date: 'Wed, 03 Sep 2025 00:26:00 GMT',
+    'request-context': 'appId=',
+    server: 'github.com',
+    'strict-transport-security': 'max-age=31536000; includeSubDomains; preload',
+    vary: 'Origin',
+    'x-content-type-options': 'nosniff',
+    'x-github-backend': 'Kubernetes',
+    'x-github-request-id': 'FCE6:123A6A:1E7D0:28638:68B78B18',
+    'x-ms-error-code': 'unavailable_model',
+    'x-request-time': '0.017'
+  },
+  request_id: undefined,
+  error: {
+    code: 'unavailable_model',
+    message: 'Unavailable model: gpt-5',
+    details: 'Unavailable model: gpt-5'
+  },
+  code: 'unavailable_model',
+  param: undefined,
+  type: undefined
+}
+[OPENAI-STD] Models list request
+OpenAI proxy listening on 3010
+📱 Serving simple chat interface
+📱 Serving simple chat interface
+📱 Serving simple chat interface
+📱 Serving simple chat interface
+[PROXY] chat request for model: "openai/gpt-4o-mini"
+[PROXY] chat request for model: "openai/gpt-4o-mini"
+[PROXY] chat request for model: "Meta-Llama-3.1-405B-Instruct"
+📱 Serving simple chat interface
+[OPENAI-STD] Chat completions request for model: "openai/o1"
+OpenAI standard API error PermissionDeniedError: 403 status code (no body)
+    at APIError.generate (file:///Users/dev/Documents/NIMDA/codespaces-models/node_modules/openai/error.mjs:47:20)
+    at OpenAI.makeStatusError (file:///Users/dev/Documents/NIMDA/codespaces-models/node_modules/openai/core.mjs:268:25)
+    at OpenAI.makeRequest (file:///Users/dev/Documents/NIMDA/codespaces-models/node_modules/openai/core.mjs:311:30)
+    at process.processTicksAndRejections (node:internal/process/task_queues:105:5)
+    at async file:///Users/dev/Documents/NIMDA/codespaces-models/server.js:258:22 {
+  status: 403,
+  headers: {
+    'content-length': '0',
+    date: 'Wed, 03 Sep 2025 00:32:50 GMT',
+    server: 'github.com',
+    vary: 'Origin',
+    'x-github-backend': 'Kubernetes',
+    'x-github-request-id': 'FD7B:5C77C:46205:5CBE9:68B78CB2'
+  },
+  request_id: undefined,
+  error: undefined,
+  code: undefined,
+  param: undefined,
+  type: undefined
+}
+[OPENAI-STD] Chat completions request for model: "openai/o3"
+OpenAI standard API error PermissionDeniedError: 403 status code (no body)
+    at APIError.generate (file:///Users/dev/Documents/NIMDA/codespaces-models/node_modules/openai/error.mjs:47:20)
+    at OpenAI.makeStatusError (file:///Users/dev/Documents/NIMDA/codespaces-models/node_modules/openai/core.mjs:268:25)
+    at OpenAI.makeRequest (file:///Users/dev/Documents/NIMDA/codespaces-models/node_modules/openai/core.mjs:311:30)
+    at process.processTicksAndRejections (node:internal/process/task_queues:105:5)
+    at async file:///Users/dev/Documents/NIMDA/codespaces-models/server.js:258:22 {
+  status: 403,
+  headers: {
+    'content-length': '0',
+    date: 'Wed, 03 Sep 2025 00:32:57 GMT',
+    server: 'github.com',
+    vary: 'Origin',
+    'x-github-backend': 'Kubernetes',
+    'x-github-request-id': 'FD86:AFDD4:4AEF6:61C96:68B78CB9'
+  },
+  request_id: undefined,
+  error: undefined,
+  code: undefined,
+  param: undefined,
+  type: undefined
+}
+OpenAI proxy listening on 3010
+📱 Serving simple chat interface
+[OPENAI-STD] Models list request
+OpenAI proxy listening on 3010
+📱 Serving simple chat interface
+[OPENAI-STD] Models list request
+📱 Serving simple chat interface
+[OPENAI-STD] Chat completions request for model: "xai/grok-3-mini"
+📱 Serving simple chat interface
+📱 Serving simple chat interface
+[OPENAI-STD] Models list request
+📱 Serving simple chat interface
+[OPENAI-STD] Models list request
+[OPENAI-STD] Chat completions request for model: "microsoft/mai-ds-r1"
+[OPENAI-STD] Chat completions request for model: "openai/gpt-4o-mini"
+[OPENAI-STD] Chat completions request for model: "microsoft/phi-4-mini-instruct"
+[OPENAI-STD] Models list request
+OpenAI proxy listening on 3010
+📱 Serving simple chat interface
+[OPENAI-STD] Models list request
+[OPENAI-STD] Chat completions request for model: "openai/gpt-4o-mini"
+[OPENAI-STD] Chat completions request for model: "openai/o1-mini"
+Streaming error PermissionDeniedError: 403 status code (no body)
+    at APIError.generate (file:///Users/dev/Documents/NIMDA/codespaces-models/node_modules/openai/error.mjs:47:20)
+    at OpenAI.makeStatusError (file:///Users/dev/Documents/NIMDA/codespaces-models/node_modules/openai/core.mjs:268:25)
+    at OpenAI.makeRequest (file:///Users/dev/Documents/NIMDA/codespaces-models/node_modules/openai/core.mjs:311:30)
+    at process.processTicksAndRejections (node:internal/process/task_queues:105:5)
+    at async file:///Users/dev/Documents/NIMDA/codespaces-models/server.js:218:30 {
+  status: 403,
+  headers: {
+    'content-length': '0',
+    date: 'Wed, 03 Sep 2025 00:46:50 GMT',
+    server: 'github.com',
+    vary: 'Origin',
+    'x-github-backend': 'Kubernetes',
+    'x-github-request-id': 'FEEC:C24A0:44B5F:5EA1C:68B78FFA'
+  },
+  request_id: undefined,
+  error: undefined,
+  code: undefined,
+  param: undefined,
+  type: undefined
+}
+📱 Serving simple chat interface
+[OPENAI-STD] Models list request
+[OPENAI-STD] Chat completions request for model: "openai/gpt-5-mini"
+Streaming error BadRequestError: 400 Unavailable model: gpt-5-mini
+    at APIError.generate (file:///Users/dev/Documents/NIMDA/codespaces-models/node_modules/openai/error.mjs:41:20)
+    at OpenAI.makeStatusError (file:///Users/dev/Documents/NIMDA/codespaces-models/node_modules/openai/core.mjs:268:25)
+    at OpenAI.makeRequest (file:///Users/dev/Documents/NIMDA/codespaces-models/node_modules/openai/core.mjs:311:30)
+    at process.processTicksAndRejections (node:internal/process/task_queues:105:5)
+    at async file:///Users/dev/Documents/NIMDA/codespaces-models/server.js:218:30 {
+  status: 400,
+  headers: {
+    'azureml-served-by-cluster': 'vienna-eastus2-01',
+    'content-length': '122',
+    'content-type': 'application/json; charset=utf-8',
+    date: 'Wed, 03 Sep 2025 00:47:14 GMT',
+    'request-context': 'appId=',
+    server: 'github.com',
+    'strict-transport-security': 'max-age=31536000; includeSubDomains; preload',
+    vary: 'Origin',
+    'x-content-type-options': 'nosniff',
+    'x-github-backend': 'Kubernetes',
+    'x-github-request-id': 'FEF5:EA082:412858:5817B4:68B79012',
+    'x-ms-error-code': 'unavailable_model',
+    'x-request-time': '0.024'
+  },
+  request_id: undefined,
+  error: {
+    code: 'unavailable_model',
+    message: 'Unavailable model: gpt-5-mini',
+    details: 'Unavailable model: gpt-5-mini'
+  },
+  code: 'unavailable_model',
+  param: undefined,
+  type: undefined
+}
+[OPENAI-STD] Chat completions request for model: "microsoft/phi-4-mini-instruct"
+OpenAI proxy listening on 3010
+📱 Serving simple chat interface
+[OPENAI-STD] Models list request
+📱 Serving simple chat interface
+[OPENAI-STD] Models list request
+[OPENAI-STD] Chat completions request for model: "microsoft/phi-3-mini-4k-instruct"
+[OPENAI-STD] Chat completions request for model: "openai/gpt-4o-mini"
+OpenAI proxy listening on 3010
+📱 Serving simple chat interface
+[OPENAI-STD] Models list request
+[OPENAI-STD] Chat completions request for model: "openai/gpt-4o"

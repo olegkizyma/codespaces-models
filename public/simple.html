@@ -348,6 +348,72 @@
             transform: scale(0.95);
         }
         
+        /* 🌊 Streaming Animation Styles */
+        .message-text.streaming {
+            position: relative;
+        }
+        
+        .message-text.streaming::after {
+            content: '▋';
+            animation: cursor-blink 1.2s infinite;
+            color: var(--accent);
+            font-weight: bold;
+            margin-left: 1px;
+        }
+        
+        @keyframes cursor-blink {
+            0%, 50% { opacity: 1; }
+            51%, 100% { opacity: 0; }
+        }
+        
+        .streaming-indicator {
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+            color: var(--muted);
+            font-size: 14px;
+            margin-left: 4px;
+        }
+        
+        .streaming-dots {
+            display: inline-flex;
+            gap: 2px;
+        }
+        
+        .streaming-dots span {
+            width: 4px;
+            height: 4px;
+            border-radius: 50%;
+            background: var(--accent);
+            animation: streaming-pulse 1.4s infinite;
+        }
+        
+        .streaming-dots span:nth-child(1) { animation-delay: 0s; }
+        .streaming-dots span:nth-child(2) { animation-delay: 0.2s; }
+        .streaming-dots span:nth-child(3) { animation-delay: 0.4s; }
+        
+        @keyframes streaming-pulse {
+            0%, 20% { opacity: 0.3; transform: scale(1); }
+            50% { opacity: 1; transform: scale(1.2); }
+            100% { opacity: 0.3; transform: scale(1); }
+        }
+        
+        /* Плавна анімація появи тексту */
+        .message-text {
+            transition: all 0.1s ease-out;
+        }
+        
+        .message.assistant .message-text.streaming {
+            background: linear-gradient(90deg, transparent 0%, rgba(0, 255, 136, 0.1) 50%, transparent 100%);
+            background-size: 200% 100%;
+            animation: streaming-highlight 2s infinite;
+        }
+        
+        @keyframes streaming-highlight {
+            0% { background-position: -200% 0; }
+            100% { background-position: 200% 0; }
+        }
+        
         .volume-indicator {
             position: fixed;
             bottom: 90px; /* Піднято вище щоб не лягало на кнопки */
@@ -541,43 +607,7 @@
                     ATLAS
                 </h1>
                 <select id="modelSelect">
-                    <optgroup label="🤖 OpenAI">
-                        <option value="openai/gpt-4o-mini">OpenAI GPT-4o Mini</option>
-                        <option value="openai/gpt-4o">OpenAI GPT-4o (найпотужніша)</option>
-                        <option value="gpt-4o-mini">GPT-4o Mini (коротка назва)</option>
-                        <option value="gpt-4o">GPT-4o (коротка назва)</option>
-                    </optgroup>
-                    <optgroup label="🧠 Microsoft Phi">
-                        <option value="microsoft/Phi-3.5-mini-instruct">Phi-3.5 Mini (найновіша)</option>
-                        <option value="microsoft/Phi-3-mini-4k-instruct">Phi-3 Mini 4K (базова)</option>
-                        <option value="Phi-3.5-mini-instruct">Phi-3.5 Mini (коротка)</option>
-                        <option value="Phi-3-mini-4k-instruct">Phi-3 Mini 4K (коротка)</option>
-                        <option value="Phi-3-medium-4k-instruct">Phi-3 Medium (коротка)</option>
-                        <option value="microsoft/Phi-3.5-MoE-instruct">Phi-3.5 MoE (експерти)</option>
-                        <option value="microsoft/Phi-3.5-vision-instruct">Phi-3.5 Vision (зображення)</option>
-                        <option value="microsoft/Phi-3-small-8k-instruct">Phi-3 Small 8K</option>
-                        <option value="microsoft/Phi-3-small-128k-instruct">Phi-3 Small 128K (довгий контекст)</option>
-                        <option value="microsoft/Phi-3-medium-4k-instruct">Phi-3 Medium 4K</option>
-                        <option value="microsoft/Phi-3-medium-128k-instruct">Phi-3 Medium 128K (довгий контекст)</option>
-                        <option value="Phi-3-small-8k-instruct">Phi-3 Small 8K (коротка)</option>
-                        <option value="Phi-3-small-128k-instruct">Phi-3 Small 128K (коротка)</option>
-                        <option value="Phi-3-medium-128k-instruct">Phi-3 Medium 128K (коротка)</option>
-                    </optgroup>
-                    <optgroup label="🚀 AI21 Jamba">
-                        <option value="AI21-Jamba-1.5-Large">Jamba 1.5 Large</option>
-                        <option value="AI21-Jamba-1.5-Mini">Jamba 1.5 Mini</option>
-                    </optgroup>
-                    <optgroup label="💬 Cohere Command">
-                        <option value="Cohere-command-r-08-2024">Command R</option>
-                        <option value="Cohere-command-r-plus-08-2024">Command R+ (покращена)</option>
-                    </optgroup>
-                    <optgroup label="🦙 Meta Llama">
-                        <option value="Meta-Llama-3.1-8B-Instruct">Llama 3.1 8B</option>
-                        <option value="Meta-Llama-3.1-405B-Instruct">Llama 3.1 405B (найбільша!)</option>
-                    </optgroup>
-                    <optgroup label="🌊 Mistral">
-                        <option value="Mistral-Nemo">Mistral Nemo</option>
-                    </optgroup>
+                    <option value="">Завантаження моделей...</option>
                 </select>
                 <div class="voice-controls">
                     <div class="voice-control-btn pending" id="ttsControlBtn" title="Увімкнути озвучування">🔊</div>
@@ -614,6 +644,16 @@
     <script>
         class SimpleChat {
             constructor() {
+                // Перевіряємо що DOM готовий
+                if (document.readyState === 'loading') {
+                    document.addEventListener('DOMContentLoaded', () => this.init());
+                    return;
+                }
+                this.init();
+            }
+            
+            init() {
+                // Знаходимо елементи з перевіркою
                 this.chat = document.getElementById('chat');
                 this.input = document.getElementById('messageInput');
                 this.sendBtn = document.getElementById('sendBtn');
@@ -622,6 +662,12 @@
                 this.modelInfo = document.getElementById('modelInfo');
                 this.modelDescription = document.getElementById('modelDescription');
                 this.atlasTitle = document.querySelector('.header h1');
+                
+                // Перевіряємо що всі елементи знайдені
+                if (!this.chat || !this.input || !this.sendBtn || !this.modelSelect) {
+                    console.error('❌ Не знайдено обов\'язкові DOM елементи');
+                    return;
+                }
                 
                 // Connection status
                 this.connectionStatus = 'connected'; // connected, connecting, disconnected
@@ -699,8 +745,9 @@
                 this.initEventListeners();
                 this.initSpeech();
                 this.initVoiceControls();
+                this.loadAvailableModels(); // Додаю динамічне завантаження моделей
                 
-                this.addMessage('assistant', 'Привіт! Я АТЛАС - ваш AI асистент з 25 моделями. Увімкніть голосові функції кнопками вгорі або просто використовуйте чат.');
+                this.addMessage('assistant', 'Привіт! Я АТЛАС - ваш AI асистент. Завантажую список доступних моделей...');
             }
             
             initEventListeners() {
@@ -1927,29 +1974,78 @@
                         body: JSON.stringify({
                             model: this.modelSelect.value,
                             messages: [
-                                { role: 'system', content: 'Ви корисний асистент. Відповідайте коротко та по суті.' },
+                                { role: 'system', content: 'Ви корисний асістент. Відповідайте коротко та по суті.' },
                                 { role: 'user', content: message }
                             ],
-                            stream: false
+                            stream: true // Увімкнули streaming!
                         })
                     });
                     
-                    const data = await response.json();
-                    
                     if (!response.ok) {
-                        throw new Error(data?.error?.message || 'Помилка запиту');
+                        const errorData = await response.json();
+                        throw new Error(errorData?.error?.message || 'Помилка запиту');
                     }
                     
-                    const reply = data?.choices?.[0]?.message?.content || 'Вибачте, не вдалося отримати відповідь';
-                    this.addMessage('assistant', reply);
+                    // Створюємо порожнє повідомлення для streaming
+                    const messageEl = this.addMessage('assistant', '');
+                    const contentEl = messageEl.querySelector('.message-text');
                     
-                    // Set connected status on successful response
+                    let fullResponse = '';
+                    let isFirstChunk = true;
+                    
+                    // Читаємо streaming відповідь
+                    const reader = response.body.getReader();
+                    const decoder = new TextDecoder();
+                    
+                    this.setLoading(false); // Прибираємо загальний лоадер
+                    this.addStreamingIndicator(contentEl); // Додаємо streaming індикатор
+                    
+                    while (true) {
+                        const { done, value } = await reader.read();
+                        if (done) break;
+                        
+                        const chunk = decoder.decode(value);
+                        const lines = chunk.split('\n');
+                        
+                        for (const line of lines) {
+                            if (line.startsWith('data: ')) {
+                                const data = line.slice(6);
+                                if (data === '[DONE]') break;
+                                
+                                try {
+                                    const parsed = JSON.parse(data);
+                                    const content = parsed?.choices?.[0]?.delta?.content;
+                                    
+                                    if (content) {
+                                        if (isFirstChunk) {
+                                            this.removeStreamingIndicator(contentEl);
+                                            isFirstChunk = false;
+                                        }
+                                        
+                                        fullResponse += content;
+                                        contentEl.textContent = fullResponse;
+                                        
+                                        // Додаємо typing ефект
+                                        contentEl.classList.add('streaming');
+                                        
+                                        // Автоскрол
+                                        this.chat.scrollTop = this.chat.scrollHeight;
+                                    }
+                                } catch (e) {
+                                    // Ігноруємо помилки парсингу окремих чанків
+                                }
+                            }
+                        }
+                    }
+                    
+                    // Завершення streaming
+                    contentEl.classList.remove('streaming');
                     this.updateConnectionStatus('connected');
                     
-                    // Auto-speak only in voice mode or if TTS is enabled
+                    // Auto-speak тільки після завершення streaming
                     const shouldSpeak = this.voiceOnlyMode || this.ttsEnabled;
-                    if (shouldSpeak) {
-                        this.speak(reply);
+                    if (shouldSpeak && fullResponse) {
+                        this.speak(fullResponse);
                     }
                     
                 } catch (error) {
@@ -2116,6 +2212,139 @@
             // TTS microphone handling methods removed - now using filter-based approach
             // Microphone stays active during TTS to allow interruption detection
             // Self-listening is prevented by checking isTTSSpeaking flag in speech recognition
+            
+            async loadAvailableModels() {
+                try {
+                    console.log('📡 Завантажую список моделей з API...');
+                    
+                    const response = await fetch('/v1/models');
+                    if (!response.ok) throw new Error(`HTTP ${response.status}`);
+                    
+                    const data = await response.json();
+                    const models = data.data || [];
+                    
+                    console.log(`✅ Завантажено ${models.length} моделей`);
+                    
+                    // Очищаємо існуючі опції
+                    this.modelSelect.innerHTML = '';
+                    
+                    // Групуємо моделі за провайдерами
+                    const modelGroups = {
+                        'openai': { label: '🤖 OpenAI', models: [] },
+                        'microsoft': { label: '🧠 Microsoft', models: [] },
+                        'meta': { label: '🦙 Meta', models: [] },
+                        'ai21-labs': { label: '🚀 AI21 Labs', models: [] },
+                        'cohere': { label: '💬 Cohere', models: [] },
+                        'mistral-ai': { label: '🌊 Mistral AI', models: [] },
+                        'deepseek': { label: '🔬 DeepSeek', models: [] },
+                        'xai': { label: '🤖 xAI', models: [] },
+                        'core42': { label: '🏛️ Core42', models: [] }
+                    };
+                    
+                    // Розподіляємо моделі по групах
+                    models.forEach(model => {
+                        const provider = model.owned_by;
+                        if (modelGroups[provider]) {
+                            modelGroups[provider].models.push(model);
+                        } else {
+                            // Якщо провайдер невідомий, додаємо до загальної групи
+                            if (!modelGroups.other) {
+                                modelGroups.other = { label: '🔧 Інші', models: [] };
+                            }
+                            modelGroups.other.models.push(model);
+                        }
+                    });
+                    
+                    // Створюємо optgroups та опції
+                    Object.entries(modelGroups).forEach(([provider, group]) => {
+                        if (group.models.length === 0) return;
+                        
+                        const optgroup = document.createElement('optgroup');
+                        optgroup.label = `${group.label} (${group.models.length})`;
+                        
+                        group.models
+                            .sort((a, b) => a.id.localeCompare(b.id))
+                            .forEach(model => {
+                                const option = document.createElement('option');
+                                option.value = model.id;
+                                option.textContent = this.getModelDisplayName(model.id);
+                                optgroup.appendChild(option);
+                            });
+                        
+                        this.modelSelect.appendChild(optgroup);
+                    });
+                    
+                    // Встановлюємо модель за замовчуванням
+                    if (models.length > 0) {
+                        const defaultModel = models.find(m => m.id === 'openai/gpt-4o-mini') || models[0];
+                        this.modelSelect.value = defaultModel.id;
+                        this.updateModelInfo();
+                    }
+                    
+                    // Оновлюємо повідомлення
+                    this.addMessage('assistant', `✅ Завантажено ${models.length} моделей! Виберіть модель зі списку вгорі.`);
+                    
+                } catch (error) {
+                    console.error('❌ Помилка завантаження моделей:', error);
+                    this.modelSelect.innerHTML = '<option value="openai/gpt-4o-mini">OpenAI GPT-4o Mini (резервна)</option>';
+                    this.addMessage('system', '⚠️ Не вдалося завантажити список моделей. Використовую резервну модель.');
+                }
+            }
+            
+            getModelDisplayName(modelId) {
+                // Створюємо зрозумілі назви для моделей
+                const nameMap = {
+                    'openai/gpt-4o-mini': 'GPT-4o Mini',
+                    'openai/gpt-4o': 'GPT-4o',
+                    'openai/gpt-4.1': 'GPT-4.1',
+                    'openai/gpt-4.1-mini': 'GPT-4.1 Mini',
+                    'openai/gpt-4.1-nano': 'GPT-4.1 Nano',
+                    'openai/gpt-5': 'GPT-5',
+                    'openai/gpt-5-chat': 'GPT-5 Chat',
+                    'openai/gpt-5-mini': 'GPT-5 Mini',
+                    'openai/gpt-5-nano': 'GPT-5 Nano',
+                    'openai/o1': 'O1 Reasoning',
+                    'openai/o1-mini': 'O1 Mini',
+                    'openai/o1-preview': 'O1 Preview',
+                    'openai/o3': 'O3 Reasoning',
+                    'openai/o3-mini': 'O3 Mini',
+                    'openai/o4-mini': 'O4 Mini',
+                    'xai/grok-3': 'Grok-3',
+                    'xai/grok-3-mini': 'Grok-3 Mini',
+                    'deepseek/deepseek-r1': 'DeepSeek R1',
+                    'deepseek/deepseek-r1-0528': 'DeepSeek R1 (May)',
+                    'deepseek/deepseek-v3-0324': 'DeepSeek v3',
+                    'microsoft/phi-4': 'Phi-4',
+                    'microsoft/phi-4-mini-instruct': 'Phi-4 Mini',
+                    'microsoft/phi-4-mini-reasoning': 'Phi-4 Mini Reasoning',
+                    'microsoft/phi-4-multimodal-instruct': 'Phi-4 Multimodal',
+                    'microsoft/phi-4-reasoning': 'Phi-4 Reasoning'
+                };
+                
+                return nameMap[modelId] || modelId.replace(/^[^\/]+\//, '').replace(/-/g, ' ');
+            }
+            
+            // 🌊 Streaming Animation Functions
+            addStreamingIndicator(contentEl) {
+                const indicator = document.createElement('span');
+                indicator.className = 'streaming-indicator';
+                indicator.innerHTML = `
+                    <span style="opacity: 0.7;">Генерую</span>
+                    <div class="streaming-dots">
+                        <span></span>
+                        <span></span>
+                        <span></span>
+                    </div>
+                `;
+                contentEl.appendChild(indicator);
+            }
+            
+            removeStreamingIndicator(contentEl) {
+                const indicator = contentEl.querySelector('.streaming-indicator');
+                if (indicator) {
+                    indicator.remove();
+                }
+            }
             
             setLoading(loading) {
                 this.isLoading = loading;

@@ -49,7 +49,7 @@ app.get('/monitor', (req, res) => {
 
 // Health check endpoint
 app.get('/health', (req, res) => {
-  res.json({ status: 'ok', timestamp: new Date().toISOString(), models: 28 });
+  res.json({ status: 'ok', timestamp: new Date().toISOString(), models: 58 });
 });
 
 const OPENAI_API_KEY = process.env.OPENAI_API_KEY || process.env.GITHUB_TOKEN;
@@ -296,40 +296,65 @@ app.get('/v1/models', async (req, res) => {
   console.log('[OPENAI-STD] Models list request');
   
   const models = [
-    // OpenAI models (4 variants)
-    { id: "openai/gpt-4o-mini", object: "model", created: 1677610602, owned_by: "openai" },
+    // Всі 58 моделей з GitHub Models API
+    { id: "ai21-labs/ai21-jamba-1.5-large", object: "model", created: 1677610602, owned_by: "ai21-labs" },
+    { id: "ai21-labs/ai21-jamba-1.5-mini", object: "model", created: 1677610602, owned_by: "ai21-labs" },
+    { id: "cohere/cohere-command-a", object: "model", created: 1677610602, owned_by: "cohere" },
+    { id: "cohere/cohere-command-r-08-2024", object: "model", created: 1677610602, owned_by: "cohere" },
+    { id: "cohere/cohere-command-r-plus-08-2024", object: "model", created: 1677610602, owned_by: "cohere" },
+    { id: "cohere/cohere-embed-v3-english", object: "model", created: 1677610602, owned_by: "cohere" },
+    { id: "cohere/cohere-embed-v3-multilingual", object: "model", created: 1677610602, owned_by: "cohere" },
+    { id: "core42/jais-30b-chat", object: "model", created: 1677610602, owned_by: "core42" },
+    { id: "deepseek/deepseek-r1", object: "model", created: 1677610602, owned_by: "deepseek" },
+    { id: "deepseek/deepseek-r1-0528", object: "model", created: 1677610602, owned_by: "deepseek" },
+    { id: "deepseek/deepseek-v3-0324", object: "model", created: 1677610602, owned_by: "deepseek" },
+    { id: "meta/llama-3.2-11b-vision-instruct", object: "model", created: 1677610602, owned_by: "meta" },
+    { id: "meta/llama-3.2-90b-vision-instruct", object: "model", created: 1677610602, owned_by: "meta" },
+    { id: "meta/llama-3.3-70b-instruct", object: "model", created: 1677610602, owned_by: "meta" },
+    { id: "meta/llama-4-maverick-17b-128e-instruct-fp8", object: "model", created: 1677610602, owned_by: "meta" },
+    { id: "meta/llama-4-scout-17b-16e-instruct", object: "model", created: 1677610602, owned_by: "meta" },
+    { id: "meta/meta-llama-3.1-405b-instruct", object: "model", created: 1677610602, owned_by: "meta" },
+    { id: "meta/meta-llama-3.1-8b-instruct", object: "model", created: 1677610602, owned_by: "meta" },
+    { id: "microsoft/mai-ds-r1", object: "model", created: 1677610602, owned_by: "microsoft" },
+    { id: "microsoft/phi-3-medium-128k-instruct", object: "model", created: 1677610602, owned_by: "microsoft" },
+    { id: "microsoft/phi-3-medium-4k-instruct", object: "model", created: 1677610602, owned_by: "microsoft" },
+    { id: "microsoft/phi-3-mini-128k-instruct", object: "model", created: 1677610602, owned_by: "microsoft" },
+    { id: "microsoft/phi-3-mini-4k-instruct", object: "model", created: 1677610602, owned_by: "microsoft" },
+    { id: "microsoft/phi-3-small-128k-instruct", object: "model", created: 1677610602, owned_by: "microsoft" },
+    { id: "microsoft/phi-3-small-8k-instruct", object: "model", created: 1677610602, owned_by: "microsoft" },
+    { id: "microsoft/phi-3.5-mini-instruct", object: "model", created: 1677610602, owned_by: "microsoft" },
+    { id: "microsoft/phi-3.5-moe-instruct", object: "model", created: 1677610602, owned_by: "microsoft" },
+    { id: "microsoft/phi-3.5-vision-instruct", object: "model", created: 1677610602, owned_by: "microsoft" },
+    { id: "microsoft/phi-4", object: "model", created: 1677610602, owned_by: "microsoft" },
+    { id: "microsoft/phi-4-mini-instruct", object: "model", created: 1677610602, owned_by: "microsoft" },
+    { id: "microsoft/phi-4-mini-reasoning", object: "model", created: 1677610602, owned_by: "microsoft" },
+    { id: "microsoft/phi-4-multimodal-instruct", object: "model", created: 1677610602, owned_by: "microsoft" },
+    { id: "microsoft/phi-4-reasoning", object: "model", created: 1677610602, owned_by: "microsoft" },
+    { id: "mistral-ai/codestral-2501", object: "model", created: 1677610602, owned_by: "mistral-ai" },
+    { id: "mistral-ai/ministral-3b", object: "model", created: 1677610602, owned_by: "mistral-ai" },
+    { id: "mistral-ai/mistral-large-2411", object: "model", created: 1677610602, owned_by: "mistral-ai" },
+    { id: "mistral-ai/mistral-medium-2505", object: "model", created: 1677610602, owned_by: "mistral-ai" },
+    { id: "mistral-ai/mistral-nemo", object: "model", created: 1677610602, owned_by: "mistral-ai" },
+    { id: "mistral-ai/mistral-small-2503", object: "model", created: 1677610602, owned_by: "mistral-ai" },
+    { id: "openai/gpt-4.1", object: "model", created: 1677610602, owned_by: "openai" },
+    { id: "openai/gpt-4.1-mini", object: "model", created: 1677610602, owned_by: "openai" },
+    { id: "openai/gpt-4.1-nano", object: "model", created: 1677610602, owned_by: "openai" },
     { id: "openai/gpt-4o", object: "model", created: 1677610602, owned_by: "openai" },
-    { id: "gpt-4o-mini", object: "model", created: 1677610602, owned_by: "openai" },
-    { id: "gpt-4o", object: "model", created: 1677610602, owned_by: "openai" },
-    
-    // Microsoft Phi models (16 variants - всі протестовані ✅)
-    { id: "microsoft/Phi-3.5-mini-instruct", object: "model", created: 1677610602, owned_by: "microsoft" },
-    { id: "microsoft/Phi-3-mini-4k-instruct", object: "model", created: 1677610602, owned_by: "microsoft" },
-    { id: "microsoft/Phi-3.5-MoE-instruct", object: "model", created: 1677610602, owned_by: "microsoft" },
-    { id: "microsoft/Phi-3.5-vision-instruct", object: "model", created: 1677610602, owned_by: "microsoft" },
-    { id: "microsoft/Phi-3-small-8k-instruct", object: "model", created: 1677610602, owned_by: "microsoft" },
-    { id: "microsoft/Phi-3-small-128k-instruct", object: "model", created: 1677610602, owned_by: "microsoft" },
-    { id: "microsoft/Phi-3-medium-4k-instruct", object: "model", created: 1677610602, owned_by: "microsoft" },
-    { id: "Phi-3.5-mini-instruct", object: "model", created: 1677610602, owned_by: "microsoft" },
-    { id: "Phi-3-mini-4k-instruct", object: "model", created: 1677610602, owned_by: "microsoft" },
-    { id: "Phi-3-medium-4k-instruct", object: "model", created: 1677610602, owned_by: "microsoft" },
-    { id: "Phi-3-small-8k-instruct", object: "model", created: 1677610602, owned_by: "microsoft" },
-    { id: "Phi-3-small-128k-instruct", object: "model", created: 1677610602, owned_by: "microsoft" },
-    
-    // AI21 models (2 variants - всі протестовані ✅)
-    { id: "AI21-Jamba-1.5-Large", object: "model", created: 1677610602, owned_by: "ai21" },
-    { id: "AI21-Jamba-1.5-Mini", object: "model", created: 1677610602, owned_by: "ai21" },
-    
-    // Cohere models (2 variants - всі протестовані ✅)
-    { id: "Cohere-command-r-08-2024", object: "model", created: 1677610602, owned_by: "cohere" },
-    { id: "Cohere-command-r-plus-08-2024", object: "model", created: 1677610602, owned_by: "cohere" },
-    
-    // Meta Llama models (2 variants - всі протестовані ✅)
-    { id: "Meta-Llama-3.1-8B-Instruct", object: "model", created: 1677610602, owned_by: "meta" },
-    { id: "Meta-Llama-3.1-405B-Instruct", object: "model", created: 1677610602, owned_by: "meta" },
-    
-    // Mistral models (1 variant - протестована ✅)
-    { id: "Mistral-Nemo", object: "model", created: 1677610602, owned_by: "mistralai" }
+    { id: "openai/gpt-4o-mini", object: "model", created: 1677610602, owned_by: "openai" },
+    { id: "openai/gpt-5", object: "model", created: 1677610602, owned_by: "openai" },
+    { id: "openai/gpt-5-chat", object: "model", created: 1677610602, owned_by: "openai" },
+    { id: "openai/gpt-5-mini", object: "model", created: 1677610602, owned_by: "openai" },
+    { id: "openai/gpt-5-nano", object: "model", created: 1677610602, owned_by: "openai" },
+    { id: "openai/o1", object: "model", created: 1677610602, owned_by: "openai" },
+    { id: "openai/o1-mini", object: "model", created: 1677610602, owned_by: "openai" },
+    { id: "openai/o1-preview", object: "model", created: 1677610602, owned_by: "openai" },
+    { id: "openai/o3", object: "model", created: 1677610602, owned_by: "openai" },
+    { id: "openai/o3-mini", object: "model", created: 1677610602, owned_by: "openai" },
+    { id: "openai/o4-mini", object: "model", created: 1677610602, owned_by: "openai" },
+    { id: "openai/text-embedding-3-large", object: "model", created: 1677610602, owned_by: "openai" },
+    { id: "openai/text-embedding-3-small", object: "model", created: 1677610602, owned_by: "openai" },
+    { id: "xai/grok-3", object: "model", created: 1677610602, owned_by: "xai" },
+    { id: "xai/grok-3-mini", object: "model", created: 1677610602, owned_by: "xai" }
   ];
 
   res.json({

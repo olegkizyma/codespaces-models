@@ -10,36 +10,73 @@
 - **Простий Chat API** - легкий у використанні інтерфейс
 - **Web UI** - інтерактивний веб-інтерфейс для тестування
 
-### 🧠 Підтримувані моделі (17 моделей)
+### 🧠 Підтримувані моделі (58 моделей з GitHub Models API)
 
-#### OpenAI (2 моделі)
-- `gpt-4o` - Найпотужніша універсальна модель (128K контекст)
-- `gpt-4o-mini` - Швидка та ефективна модель (128K контекст)
+#### 📋 Повний список моделей для тестування:
 
-#### Microsoft (8 моделей)
-- `Phi-3-mini-4k-instruct` - Компактна модель (4K контекст)
-- `Phi-3-small-8k-instruct` - Мала модель (8K контекст) 
-- `Phi-3-small-128k-instruct` - Мала модель з великим контекстом (128K)
-- `Phi-3-medium-4k-instruct` - Середня модель (4K контекст)
-- `Phi-3-medium-128k-instruct` - Середня модель з великим контекстом (128K)
-- `Phi-3.5-mini-instruct` - Покращена міні версія (128K контекст)
-- `Phi-3.5-MoE-instruct` - Mixture of Experts модель (128K контекст)
-- `microsoft/Phi-3.5-vision-instruct` - Модель з підтримкою зображень (128K контекст)
+1. `ai21-labs/ai21-jamba-1.5-large`
+2. `ai21-labs/ai21-jamba-1.5-mini`
+3. `cohere/cohere-command-a`
+4. `cohere/cohere-command-r-08-2024`
+5. `cohere/cohere-command-r-plus-08-2024`
+6. `cohere/cohere-embed-v3-english`
+7. `cohere/cohere-embed-v3-multilingual`
+8. `core42/jais-30b-chat`
+9. `deepseek/deepseek-r1`
+10. `deepseek/deepseek-r1-0528`
+11. `deepseek/deepseek-v3-0324`
+12. `meta/llama-3.2-11b-vision-instruct`
+13. `meta/llama-3.2-90b-vision-instruct`
+14. `meta/llama-3.3-70b-instruct`
+15. `meta/llama-4-maverick-17b-128e-instruct-fp8`
+16. `meta/llama-4-scout-17b-16e-instruct`
+17. `meta/meta-llama-3.1-405b-instruct`
+18. `meta/meta-llama-3.1-8b-instruct`
+19. `microsoft/mai-ds-r1`
+20. `microsoft/phi-3-medium-128k-instruct`
+21. `microsoft/phi-3-medium-4k-instruct`
+22. `microsoft/phi-3-mini-128k-instruct`
+23. `microsoft/phi-3-mini-4k-instruct`
+24. `microsoft/phi-3-small-128k-instruct`
+25. `microsoft/phi-3-small-8k-instruct`
+26. `microsoft/phi-3.5-mini-instruct`
+27. `microsoft/phi-3.5-moe-instruct`
+28. `microsoft/phi-3.5-vision-instruct`
+29. `microsoft/phi-4`
+30. `microsoft/phi-4-mini-instruct`
+31. `microsoft/phi-4-mini-reasoning`
+32. `microsoft/phi-4-multimodal-instruct`
+33. `microsoft/phi-4-reasoning`
+34. `mistral-ai/codestral-2501`
+35. `mistral-ai/ministral-3b`
+36. `mistral-ai/mistral-large-2411`
+37. `mistral-ai/mistral-medium-2505`
+38. `mistral-ai/mistral-nemo`
+39. `mistral-ai/mistral-small-2503`
+40. `openai/gpt-4.1`
+41. `openai/gpt-4.1-mini`
+42. `openai/gpt-4.1-nano`
+43. `openai/gpt-4o`
+44. `openai/gpt-4o-mini`
+45. `openai/gpt-5`
+46. `openai/gpt-5-chat`
+47. `openai/gpt-5-mini`
+48. `openai/gpt-5-nano`
+49. `openai/o1`
+50. `openai/o1-mini`
+51. `openai/o1-preview`
+52. `openai/o3`
+53. `openai/o3-mini`
+54. `openai/o4-mini`
+55. `openai/text-embedding-3-large`
+56. `openai/text-embedding-3-small`
+57. `xai/grok-3`
+58. `xai/grok-3-mini`
 
-#### AI21 (2 моделі)
-- `AI21-Jamba-1.5-Large` - Найбільший контекст (256K токенів)
-- `AI21-Jamba-1.5-Mini` - Компактна версія Jamba (128K токенів)
-
-#### Cohere (2 моделі) 
-- `Cohere-command-r-08-2024` - Оновлена базова модель (128K контекст)
-- `Cohere-command-r-plus-08-2024` - Покращена plus версія (128K контекст)
-
-#### Meta (2 моделі)
-- `Meta-Llama-3.1-8B-Instruct` - Ефективна модель (128K контекст)
-- `Meta-Llama-3.1-405B-Instruct` - Найпотужніша модель (128K контекст)
-
-#### Mistral (1 модель)
-- `Mistral-Nemo` - Швидка європейська модель (128K контекст)
+**🧪 Статус тестування:**
+- ✅ Протестовані: `openai/gpt-4.1`, `xai/grok-3`, `deepseek/deepseek-r1`, `microsoft/phi-4`
+- ❌ Не працюють: `openai/gpt-5`
+- 🔄 Решта 53 моделі потребують тестування
 
 ### 📊 Моніторинг та аналітика
 - **Статистика використання** - детальна інформація по кожній моделі
