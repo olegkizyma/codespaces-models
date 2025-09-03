@@ -1,0 +1,322 @@
+<!DOCTYPE html>
+<html lang="uk">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Чат - OpenAI SDK</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+        
+        .chat-container {
+            width: 90%;
+            max-width: 800px;
+            height: 90vh;
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.2);
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+        
+        .chat-header {
+            background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+            padding: 20px;
+            text-align: center;
+            color: white;
+        }
+        
+        .chat-header h1 {
+            font-size: 1.8em;
+            margin-bottom: 5px;
+        }
+        
+        .model-selector {
+            margin-top: 10px;
+        }
+        
+        .model-selector select {
+            padding: 8px 15px;
+            border: none;
+            border-radius: 20px;
+            background: rgba(255, 255, 255, 0.2);
+            color: white;
+            font-size: 14px;
+            cursor: pointer;
+            outline: none;
+        }
+        
+        .model-selector select option {
+            color: #333;
+            background: white;
+        }
+        
+        .chat-messages {
+            flex: 1;
+            padding: 20px;
+            overflow-y: auto;
+            background: #f8f9fa;
+        }
+        
+        .message {
+            margin-bottom: 20px;
+            display: flex;
+            align-items: flex-start;
+            animation: fadeIn 0.5s ease-in;
+        }
+        
+        .message.user {
+            justify-content: flex-end;
+        }
+        
+        .message-content {
+            max-width: 70%;
+            padding: 15px 20px;
+            border-radius: 20px;
+            position: relative;
+            word-wrap: break-word;
+            line-height: 1.4;
+        }
+        
+        .message.user .message-content {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border-bottom-right-radius: 5px;
+        }
+        
+        .message.assistant .message-content {
+            background: white;
+            border: 1px solid #e1e5e9;
+            color: #333;
+            border-bottom-left-radius: 5px;
+        }
+        
+        .message-avatar {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            margin: 0 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            font-size: 16px;
+        }
+        
+        .message.user .message-avatar {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            order: 2;
+        }
+        
+        .message.assistant .message-avatar {
+            background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+            color: white;
+        }
+        
+        .chat-input {
+            padding: 20px;
+            background: white;
+            border-top: 1px solid #e1e5e9;
+        }
+        
+        .input-container {
+            display: flex;
+            gap: 15px;
+            align-items: flex-end;
+        }
+        
+        .input-group {
+            flex: 1;
+        }
+        
+        .input-group textarea {
+            width: 100%;
+            min-height: 50px;
+            max-height: 120px;
+            padding: 15px 20px;
+            border: 2px solid #e1e5e9;
+            border-radius: 25px;
+            font-family: inherit;
+            font-size: 16px;
+            resize: none;
+            outline: none;
+            transition: border-color 0.3s ease;
+        }
+        
+        .input-group textarea:focus {
+            border-color: #4facfe;
+        }
+        
+        .send-button {
+            padding: 15px 25px;
+            background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+            color: white;
+            border: none;
+            border-radius: 25px;
+            cursor: pointer;
+            font-weight: bold;
+            transition: transform 0.2s ease;
+            min-width: 100px;
+        }
+        
+        .send-button:hover:not(:disabled) {
+            transform: translateY(-2px);
+        }
+        
+        .send-button:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+        }
+        
+        .typing-indicator {
+            display: none;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+        
+        .typing-indicator .message-avatar {
+            background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+            color: white;
+        }
+        
+        .typing-dots {
+            background: white;
+            border: 1px solid #e1e5e9;
+            padding: 15px 20px;
+            border-radius: 20px;
+            border-bottom-left-radius: 5px;
+        }
+        
+        .typing-dots span {
+            display: inline-block;
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: #4facfe;
+            margin: 0 2px;
+            animation: typing 1.4s infinite;
+        }
+        
+        .typing-dots span:nth-child(2) {
+            animation-delay: 0.2s;
+        }
+        
+        .typing-dots span:nth-child(3) {
+            animation-delay: 0.4s;
+        }
+        
+        @keyframes typing {
+            0%, 60%, 100% {
+                transform: translateY(0);
+            }
+            30% {
+                transform: translateY(-10px);
+            }
+        }
+        
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(10px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+        
+        .status-info {
+            font-size: 12px;
+            color: rgba(255,255,255,0.8);
+            margin-top: 10px;
+            text-align: center;
+        }
+        
+        .error-message {
+            background: #ff6b6b;
+            color: white;
+            padding: 15px;
+            border-radius: 10px;
+            margin: 10px 20px;
+            text-align: center;
+            animation: fadeIn 0.5s ease-in;
+        }
+        
+        @media (max-width: 768px) {
+            .chat-container {
+                width: 95%;
+                height: 95vh;
+            }
+            
+            .message-content {
+                max-width: 85%;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="chat-container">
+        <div class="chat-header">
+            <h1>🤖 AI Чат</h1>
+            <p>Працює на вашому API через OpenAI SDK</p>
+            <div class="model-selector">
+                <select id="modelSelect">
+                    <option value="microsoft/phi-3-mini-4k-instruct">Phi-3 Mini 4K</option>
+                    <option value="microsoft/phi-3.5-mini-instruct">Phi-3.5 Mini</option>
+                    <option value="openai/gpt-4o-mini">GPT-4o Mini</option>
+                    <option value="meta/llama-3.3-70b-instruct">Llama 3.3 70B</option>
+                    <option value="mistral-ai/mistral-small-2503">Mistral Small</option>
+                </select>
+            </div>
+            <div class="status-info">
+                API: https://8a42c760f69d.ngrok-free.app/v1
+            </div>
+        </div>
+        
+        <div class="chat-messages" id="chatMessages">
+            <div class="message assistant">
+                <div class="message-avatar">🤖</div>
+                <div class="message-content">
+                    Привіт! Я AI асистент, що працює через ваш локальний API. Оберіть модель та задайте мені будь-яке питання! 😊
+                </div>
+            </div>
+        </div>
+        
+        <div class="typing-indicator" id="typingIndicator">
+            <div class="message-avatar">🤖</div>
+            <div class="typing-dots">
+                <span></span>
+                <span></span>
+                <span></span>
+            </div>
+        </div>
+        
+        <div class="chat-input">
+            <div class="input-container">
+                <div class="input-group">
+                    <textarea id="messageInput" 
+                              placeholder="Введіть ваше повідомлення..." 
+                              rows="1"></textarea>
+                </div>
+                <button id="sendButton" class="send-button">Відправити</button>
+            </div>
+        </div>
+    </div>
+
+    <script type="module" src="chat.js"></script>
+</body>
+</html>

@@ -1,0 +1,215 @@
+<!DOCTYPE html>
+<html lang="uk">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🤖 AI Чат - Швидкий доступ</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            margin: 0;
+            padding: 20px;
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+        
+        .container {
+            background: rgba(255, 255, 255, 0.95);
+            padding: 40px;
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.2);
+            text-align: center;
+            max-width: 600px;
+            width: 100%;
+        }
+        
+        h1 {
+            color: #333;
+            margin-bottom: 20px;
+            font-size: 2.5em;
+        }
+        
+        .subtitle {
+            color: #666;
+            margin-bottom: 30px;
+            font-size: 1.2em;
+        }
+        
+        .links {
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+            margin: 30px 0;
+        }
+        
+        .link-button {
+            display: inline-block;
+            padding: 15px 30px;
+            background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+            color: white;
+            text-decoration: none;
+            border-radius: 25px;
+            font-weight: bold;
+            transition: transform 0.2s ease;
+            font-size: 1.1em;
+        }
+        
+        .link-button:hover {
+            transform: translateY(-2px);
+        }
+        
+        .api-info {
+            background: #f8f9fa;
+            padding: 20px;
+            border-radius: 10px;
+            margin: 20px 0;
+            font-family: 'Courier New', monospace;
+            font-size: 0.9em;
+            color: #333;
+        }
+        
+        .status {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 10px;
+            margin: 20px 0;
+        }
+        
+        .status-dot {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            background: #28a745;
+            animation: pulse 2s infinite;
+        }
+        
+        @keyframes pulse {
+            0% { opacity: 1; }
+            50% { opacity: 0.5; }
+            100% { opacity: 1; }
+        }
+        
+        .features {
+            text-align: left;
+            margin: 30px 0;
+        }
+        
+        .features ul {
+            list-style: none;
+            padding: 0;
+        }
+        
+        .features li {
+            padding: 8px 0;
+            position: relative;
+            padding-left: 25px;
+        }
+        
+        .features li::before {
+            content: "✅";
+            position: absolute;
+            left: 0;
+        }
+        
+        @media (max-width: 600px) {
+            .container {
+                margin: 10px;
+                padding: 30px 20px;
+            }
+            
+            h1 {
+                font-size: 2em;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🤖 AI Чат</h1>
+        <p class="subtitle">Працює на вашому API через OpenAI SDK</p>
+        
+        <div class="status">
+            <div class="status-dot"></div>
+            <span>Сервер працює</span>
+        </div>
+        
+        <div class="links">
+            <a href="webchat/index.html" class="link-button">
+                💬 Відкрити веб-чат
+            </a>
+            <a href="ukrainian-tts-demo.html" class="link-button" style="background: linear-gradient(135deg, #005BBB 0%, #FFD700 100%);">
+                🇺🇦 Українські TTS голоси
+            </a>
+        </div>
+        
+        <div class="api-info">
+            <strong>🔗 API URL:</strong><br>
+            https://8a42c760f69d.ngrok-free.app/v1<br><br>
+            
+            <strong>🔊 TTS URL:</strong><br>
+            https://8a42c760f69d.ngrok-free.app/tts?text=Привіт<br><br>
+            
+            <strong>📋 Моделі:</strong><br>
+            https://8a42c760f69d.ngrok-free.app/v1/models
+        </div>
+        
+        <div class="features">
+            <h3>🌟 Особливості:</h3>
+            <ul>
+                <li>58+ AI моделей (GPT, Llama, Phi, Mistral)</li>
+                <li>Реал-тайм стрімінг відповідей</li>
+                <li>🇺🇦 Українські TTS голоси (Анатоль, Наталя)</li>
+                <li>Повна сумісність з OpenAI SDK</li>
+                <li>Адаптивний веб-інтерфейс</li>
+                <li>Історія розмов</li>
+            </ul>
+        </div>
+        
+        <div style="margin-top: 30px; padding: 20px; background: #e3f2fd; border-radius: 10px;">
+            <h4>🚀 Тестування через термінал:</h4>
+            <p style="font-family: 'Courier New'; font-size: 0.9em; margin: 10px 0;">
+                <strong>Node.js:</strong> node test-openai-sdk.mjs --chat<br>
+                <strong>Python:</strong> python3 test-openai-sdk.py --chat
+            </p>
+        </div>
+        
+        <p style="margin-top: 30px; color: #666; font-size: 0.9em;">
+            📚 Детальну документацію дивіться у файлі <strong>AI_CHAT_README.md</strong>
+        </p>
+    </div>
+    
+    <script>
+        // Перевірка статусу API
+        async function checkStatus() {
+            try {
+                const response = await fetch('https://8a42c760f69d.ngrok-free.app/v1/models');
+                const statusDot = document.querySelector('.status-dot');
+                const statusText = document.querySelector('.status span');
+                
+                if (response.ok) {
+                    statusDot.style.background = '#28a745';
+                    statusText.textContent = 'API працює ✅';
+                } else {
+                    statusDot.style.background = '#ffc107';
+                    statusText.textContent = 'API недоступний ⚠️';
+                }
+            } catch (error) {
+                const statusDot = document.querySelector('.status-dot');
+                const statusText = document.querySelector('.status span');
+                statusDot.style.background = '#dc3545';
+                statusText.textContent = 'API недоступний ❌';
+            }
+        }
+        
+        // Перевіряємо статус при завантаженні
+        document.addEventListener('DOMContentLoaded', checkStatus);
+        
+        // Перевіряємо кожні 30 секунд
+        setInterval(checkStatus, 30000);
+    </script>
+</body>
+</html>

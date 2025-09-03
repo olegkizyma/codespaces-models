@@ -110,6 +110,32 @@ const TTS_PROXY_TARGET = String(process.env.TTS_PROXY_TARGET || 'http://127.0.0.
 
 if (ENABLE_TTS_PROXY) {
   // Map /tts and /tts/* → TTS_PROXY_TARGET
+  // Быстрый ответ на CORS preflight
+  app.options(['/tts', '/tts/*'], (req, res) => {
+    res.setHeader('Access-Control-Allow-Origin', '*');
+    res.setHeader('Access-Control-Allow-Methods', 'GET, OPTIONS, HEAD');
+    res.setHeader('Access-Control-Allow-Headers', 'Range, Authorization, Content-Type, X-Requested-With');
+    res.status(204).end();
+  });
+
+  // Легкий HEAD для проверки доступности сервиса
+  app.head(['/tts', '/tts/*'], async (req, res) => {
+    try {
+      const prefixStripped = req.path.replace(/^\/tts/, '') || '/';
+      const qs = req.url.includes('?') ? req.url.substring(req.url.indexOf('?')) : '';
+      const targetUrl = `${TTS_PROXY_TARGET}${prefixStripped}${qs}`;
+
+      const upstream = await fetch(targetUrl, { method: 'HEAD' });
+      res.status(upstream.status);
+      const ct = upstream.headers.get('content-type');
+      if (ct) res.setHeader('Content-Type', ct);
+      res.setHeader('Access-Control-Allow-Origin', '*');
+      res.end();
+    } catch (e) {
+      res.status(502).end();
+    }
+  });
+
   app.get(['/tts', '/tts/*'], async (req, res) => {
     try {
       // Rebuild target URL: preserve query, drop '/tts' prefix from path
@@ -119,41 +145,61 @@ if (ENABLE_TTS_PROXY) {
 
       console.log(`[TTS] Проксирую запит: ${targetUrl}`);
 
+      // Проксируем ключевые заголовки клиента (напр., Range) и выставляем безопасные значения по умолчанию
+      const passThroughHeaders = {
+        'User-Agent': req.headers['user-agent'] || 'TTS-Proxy/1.0',
+        'Accept': req.headers['accept'] || 'audio/wav, audio/mpeg, audio/*',
+        'Accept-Language': req.headers['accept-language'] || 'uk-UA, uk, ru, en',
+        'Accept-Charset': 'UTF-8'
+      };
+      if (req.headers['range']) passThroughHeaders['Range'] = req.headers['range'];
+      if (req.headers['if-none-match']) passThroughHeaders['If-None-Match'] = req.headers['if-none-match'];
+      if (req.headers['if-modified-since']) passThroughHeaders['If-Modified-Since'] = req.headers['if-modified-since'];
+
       const upstream = await fetch(targetUrl, {
         method: 'GET',
-        headers: {
-          'User-Agent': 'TTS-Proxy/1.0',
-          'Accept': 'audio/wav, audio/mpeg, audio/*',
-          'Accept-Language': 'uk-UA, uk, ru, en',
-          'Accept-Charset': 'UTF-8'
-        }
+        headers: passThroughHeaders
       });
 
       if (!upstream.ok) {
         throw new Error(`TTS сервер повернув ${upstream.status}: ${upstream.statusText}`);
       }
 
-      // Copy important headers
+      // Пробрасываем важные заголовки, поддерживаем 200/206 и потоковую передачу без буферизации в памяти
+      const statusCode = upstream.status; // 200 или 206 (при Range)
       const ct = upstream.headers.get('content-type') || 'audio/wav';
       const cd = upstream.headers.get('content-disposition');
       const cl = upstream.headers.get('content-length');
-      
+      const cr = upstream.headers.get('content-range');
+      const ar = upstream.headers.get('accept-ranges');
+      const cc = upstream.headers.get('cache-control');
+      const etag = upstream.headers.get('etag');
+
+      res.status(statusCode);
       res.setHeader('Content-Type', ct);
       if (cd) res.setHeader('Content-Disposition', cd);
       if (cl) res.setHeader('Content-Length', cl);
-      
-      // Add CORS headers for web access
+      if (cr) res.setHeader('Content-Range', cr);
+      if (ar) res.setHeader('Accept-Ranges', ar);
+      if (cc) res.setHeader('Cache-Control', cc);
+      if (etag) res.setHeader('ETag', etag);
+
+      // CORS для веба
       res.setHeader('Access-Control-Allow-Origin', '*');
       res.setHeader('Access-Control-Allow-Methods', 'GET');
 
-      // Stream body
-      const buffer = Buffer.from(await upstream.arrayBuffer());
-      if (buffer.length === 0) {
-        throw new Error('TTS сервер повернув пустий аудіофайл');
-      }
-      
-      console.log(`[TTS] Успішно згенеровано аудіо: ${buffer.length} байт`);
-      res.send(buffer);
+      // Потоковая передача тела ответа
+      const { Readable } = await import('node:stream');
+      const nodeStream = Readable.fromWeb(upstream.body);
+      let sent = 0;
+      nodeStream.on('data', (chunk) => { sent += chunk.length; });
+      nodeStream.on('end', () => {
+        console.log(`[TTS] Відправлено аудіо клієнту: ~${sent} байт (status ${statusCode})`);
+      });
+      nodeStream.on('error', (e) => {
+        console.error('[TTS] Stream error:', e?.message || e);
+      });
+      nodeStream.pipe(res);
       
     } catch (err) {
       console.error('[TTS] Помилка:', err.message);
@@ -697,9 +743,10 @@ async function handleModelsList(req, res) {
   });
 }
 
-app.get('/v1/models', handleModelsList);
-// Alias for compatibility
-app.get('/api/models', handleModelsList);
+// Alias for compatibility (only in non-strict mode)
+if (!STRICT_OPENAI_API) {
+  app.get('/api/models', handleModelsList);
+}
 
 // Model recommendations endpoint
 app.post("/v1/recommend-model", (req, res) => {
@@ -889,7 +936,11 @@ curl -s -X POST "http://localhost:3010/v1/chat/completions" \\
   }
 });
 
-    } // end of non-strict endpoints
+} // end of non-strict endpoints
+
+// Standard OpenAI endpoints always available (including in strict mode)
+app.post('/v1/chat/completions', handleChatCompletions);
+app.get('/v1/models', handleModelsList);
 
 const port = process.env.PORT || 3010;
 app.listen(port, () => console.log(`OpenAI proxy listening on ${port}`));

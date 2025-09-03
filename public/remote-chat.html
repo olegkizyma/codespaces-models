@@ -1,0 +1,71 @@
+<!doctype html>
+<html lang="uk">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Remote AI Chat</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&display=swap" rel="stylesheet">
+  <style>
+    :root { --bg:#0f172a; --panel:#111827; --text:#e5e7eb; --muted:#9ca3af; --brand:#60a5fa; }
+    * { box-sizing: border-box }
+    body { margin:0; font-family: Inter, system-ui, -apple-system, Segoe UI, Roboto, "Helvetica Neue", Arial, "Noto Sans", "Apple Color Emoji", "Segoe UI Emoji"; background:linear-gradient(180deg,#0b1022,#0f172a); color:var(--text); min-height:100vh; display:flex; align-items:center; justify-content:center; }
+    .wrap { width:min(920px, 96vw); height:min(88vh, 900px); background:rgba(17,24,39,.75); border:1px solid rgba(255,255,255,.06); border-radius:16px; backdrop-filter: blur(8px); box-shadow: 0 20px 60px rgba(0,0,0,.45); overflow:hidden; display:flex; flex-direction:column }
+    header { padding:16px 18px; border-bottom:1px solid rgba(255,255,255,.06); display:flex; align-items:center; gap:12px }
+    header h1 { font-size:16px; margin:0; font-weight:600 }
+    header .muted { color:var(--muted); font-size:12px }
+    .controls { margin-left:auto; display:flex; gap:8px; align-items:center }
+    select, button, input[type="text"], textarea { background:#0b1220; color:var(--text); border:1px solid rgba(255,255,255,.08); border-radius:10px; padding:10px 12px; font-size:14px; outline:none }
+    select:hover, button:hover, input:hover, textarea:hover { border-color: rgba(255,255,255,.16) }
+    button.primary { background:linear-gradient(180deg,#3b82f6,#2563eb); border:none; font-weight:600 }
+    main { flex:1; overflow:auto; padding:16px }
+    .msg { display:flex; gap:12px; margin-bottom:14px; align-items:flex-start }
+    .role { width:28px; height:28px; border-radius:50%; display:flex; align-items:center; justify-content:center; background:#111827; border:1px solid rgba(255,255,255,.08) }
+    .bubble { background:#0b1220; border:1px solid rgba(255,255,255,.08); border-radius:14px; padding:12px 14px; line-height:1.45 }
+    .user .bubble { background:rgba(59,130,246,.08) }
+    .tools { display:flex; gap:8px; align-items:center; margin-top:6px }
+    .foot { border-top:1px solid rgba(255,255,255,.06); padding:10px 12px; display:flex; gap:10px; align-items:flex-end }
+    textarea { flex:1; resize:vertical; min-height:46px; max-height:160px }
+    audio { width: 220px }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <header>
+      <h1>🔗 Remote AI Chat</h1>
+      <span class="muted">API & TTS з цього ж домену</span>
+      <div class="controls">
+        <label class="muted">Модель</label>
+        <select id="model">
+          <option value="microsoft/phi-3-mini-4k-instruct">Phi-3 Mini 4K</option>
+          <option value="microsoft/phi-3.5-mini-instruct">Phi-3.5 Mini</option>
+          <option value="meta/llama-3.3-70b-instruct">Llama 3.3 70B</option>
+          <option value="mistral-ai/mistral-small-2503">Mistral Small</option>
+          <option value="openai/gpt-4o-mini">GPT-4o Mini</option>
+        </select>
+        <label class="muted">Голос</label>
+        <select id="voice">
+          <option value="anatol">Анатоль</option>
+          <option value="natalia">Наталя</option>
+        </select>
+        <button id="ping" title="Перевірити /v1/models">Ping</button>
+      </div>
+    </header>
+
+    <main id="feed">
+      <div class="msg sys">
+        <div class="role">ℹ️</div>
+        <div class="bubble">Вітаю! Ви на віддаленому фронтенді. Напишіть повідомлення нижче — відповідь прийде з API цього домену, а TTS — з /tts.</div>
+      </div>
+    </main>
+
+    <div class="foot">
+      <textarea id="input" placeholder="Напишіть повідомлення…"></textarea>
+      <button id="send" class="primary">Відправити</button>
+    </div>
+  </div>
+
+  <script type="module" src="/remote-chat.js"></script>
+</body>
+</html>
