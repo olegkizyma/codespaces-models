@@ -16,54 +16,214 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 
-// We'll mount static after root route to ensure '/' serves mobile.html
-app.use('/ui', express.static('public'));
+// Strict OpenAI mode flag
+const STRICT_OPENAI_API = (() => {
+  const v = String(process.env.STRICT_OPENAI_API || '').trim().toLowerCase();
+  return v === '1' || v === 'true' || v === 'yes' || v === 'on';
+})();
 
-// Serve mobile-first Voice UI at root and /modern
-// Serve main page
-app.get('/', (req, res) => {
-  console.log('📱 Serving simple chat interface');
-  res.sendFile(path.join(__dirname, 'public/simple.html'));
-});
+// Optional proxy access key middleware
+// - If PROXY_SERVER_KEY is set, require clients to provide it
+// - Accepted as:
+//   • Header: X-Proxy-Server-Key: <key>
+//   • Or Authorization: Bearer <key> (only when PROXY_AUTH_MODE=env)
+function requireProxyKey(req, res, next) {
+  const requiredKey = process.env.PROXY_SERVER_KEY;
+  if (!requiredKey) return next();
 
-app.get('/modern', (req, res) => {
-  res.sendFile(path.join(__dirname, 'public', 'mobile.html'));
-});
+  const headerKeyRaw = req.headers['x-proxy-server-key'] || req.headers['x-proxy-key'];
+  const headerKey = Array.isArray(headerKeyRaw) ? String(headerKeyRaw[0]) : String(headerKeyRaw || '');
 
-app.get('/simple', (req, res) => {
-  res.sendFile(path.join(__dirname, 'public', 'simple.html'));
-});
+  let authKey = '';
+  const authHeader = req.headers?.authorization || req.headers?.Authorization;
+  const mode = (process.env.PROXY_AUTH_MODE || 'prefer-request').toLowerCase();
+  if (mode === 'env' && authHeader && /^Bearer\s+/i.test(authHeader)) {
+    authKey = String(authHeader).replace(/^Bearer\s+/i, '').trim();
+  }
 
-// Static assets at root (after overriding '/')
-app.use(express.static('public'));
+  const provided = headerKey || authKey;
+  if (provided && provided === requiredKey) return next();
 
-// Serve classic UI at /classic
-app.get('/classic', (req, res) => {
-  res.sendFile(path.join(__dirname, 'public', 'index.html'));
-});
+  const statusCode = 401;
+  return res.status(statusCode).json({
+    error: {
+      message: 'missing or invalid proxy key',
+      type: 'authentication_error',
+      param: null,
+      code: 'proxy_key_invalid'
+    }
+  });
+}
 
-// Serve monitoring interface at /monitor
-app.get('/monitor', (req, res) => {
-  res.sendFile(path.join(__dirname, 'public', 'monitor.html'));
-});
+// Enforce proxy key only for API routes
+app.use('/v1', requireProxyKey);
+app.use('/api', requireProxyKey);
+
+if (!STRICT_OPENAI_API) {
+  // We'll mount static after root route to ensure '/' serves mobile.html
+  app.use('/ui', express.static('public'));
+
+  // Serve mobile-first Voice UI at root and /modern
+  // Serve main page
+  app.get('/', (req, res) => {
+    console.log('📱 Serving simple chat interface');
+    res.sendFile(path.join(__dirname, 'public/simple.html'));
+  });
+
+  app.get('/modern', (req, res) => {
+    res.sendFile(path.join(__dirname, 'public', 'mobile.html'));
+  });
+
+  app.get('/simple', (req, res) => {
+    res.sendFile(path.join(__dirname, 'public', 'simple.html'));
+  });
+
+  // Static assets at root (after overriding '/')
+  app.use(express.static('public'));
+
+  // Serve classic UI at /classic
+  app.get('/classic', (req, res) => {
+    res.sendFile(path.join(__dirname, 'public', 'index.html'));
+  });
+
+  // Serve monitoring interface at /monitor
+  app.get('/monitor', (req, res) => {
+    res.sendFile(path.join(__dirname, 'public', 'monitor.html'));
+  });
+}
 
 // Health check endpoint
 app.get('/health', (req, res) => {
   res.json({ status: 'ok', timestamp: new Date().toISOString(), models: 58 });
 });
 
-const OPENAI_API_KEY = process.env.OPENAI_API_KEY || process.env.GITHUB_TOKEN;
-if (!OPENAI_API_KEY) {
-  console.warn("OPENAI_API_KEY or GITHUB_TOKEN is not set. The proxy will fail without credentials.");
+// Lightweight proxy for local TTS container
+// Usage: GET /tts?text=...&voice=anatol&name=foo&scale=1.2
+// Env config:
+//   TTS_PROXY_TARGET=http://127.0.0.1:8080 (default)
+//   ENABLE_TTS_PROXY=true|false (default: true)
+const ENABLE_TTS_PROXY = (() => {
+  const v = String(process.env.ENABLE_TTS_PROXY ?? '1').trim().toLowerCase();
+  return v === '1' || v === 'true' || v === 'yes' || v === 'on';
+})();
+const TTS_PROXY_TARGET = String(process.env.TTS_PROXY_TARGET || 'http://127.0.0.1:8080');
+
+if (ENABLE_TTS_PROXY) {
+  // Map /tts and /tts/* → TTS_PROXY_TARGET
+  app.get(['/tts', '/tts/*'], async (req, res) => {
+    try {
+      // Rebuild target URL: preserve query, drop '/tts' prefix from path
+      const prefixStripped = req.path.replace(/^\/tts/, '') || '/';
+      const qs = req.url.includes('?') ? req.url.substring(req.url.indexOf('?')) : '';
+      const targetUrl = `${TTS_PROXY_TARGET}${prefixStripped}${qs}`;
+
+      console.log(`[TTS] Проксирую запит: ${targetUrl}`);
+
+      const upstream = await fetch(targetUrl, {
+        method: 'GET',
+        headers: {
+          'User-Agent': 'TTS-Proxy/1.0',
+          'Accept': 'audio/wav, audio/mpeg, audio/*',
+          'Accept-Language': 'uk-UA, uk, ru, en',
+          'Accept-Charset': 'UTF-8'
+        }
+      });
+
+      if (!upstream.ok) {
+        throw new Error(`TTS сервер повернув ${upstream.status}: ${upstream.statusText}`);
+      }
+
+      // Copy important headers
+      const ct = upstream.headers.get('content-type') || 'audio/wav';
+      const cd = upstream.headers.get('content-disposition');
+      const cl = upstream.headers.get('content-length');
+      
+      res.setHeader('Content-Type', ct);
+      if (cd) res.setHeader('Content-Disposition', cd);
+      if (cl) res.setHeader('Content-Length', cl);
+      
+      // Add CORS headers for web access
+      res.setHeader('Access-Control-Allow-Origin', '*');
+      res.setHeader('Access-Control-Allow-Methods', 'GET');
+
+      // Stream body
+      const buffer = Buffer.from(await upstream.arrayBuffer());
+      if (buffer.length === 0) {
+        throw new Error('TTS сервер повернув пустий аудіофайл');
+      }
+      
+      console.log(`[TTS] Успішно згенеровано аудіо: ${buffer.length} байт`);
+      res.send(buffer);
+      
+    } catch (err) {
+      console.error('[TTS] Помилка:', err.message);
+      const message = err?.message || String(err);
+      res.status(502).json({
+        error: {
+          message: `TTS proxy error: ${message}`,
+          type: 'bad_gateway',
+          param: null,
+          code: 'tts_upstream_error'
+        }
+      });
+    }
+  });
 }
 
-const client = new OpenAI({ apiKey: OPENAI_API_KEY, baseURL: process.env.OPENAI_BASE_URL || undefined });
+// Request-scoped API key/baseURL resolution
+function getApiKeyFromRequest(req) {
+  // Resolve auth mode: env | request | prefer-request
+  const headerMode = req.headers['x-proxy-auth-mode'];
+  const envMode = process.env.PROXY_AUTH_MODE;
+  const mode = (headerMode ? String(Array.isArray(headerMode) ? headerMode[0] : headerMode) : envMode || 'prefer-request').toLowerCase();
+
+  const envKey = process.env.OPENAI_API_KEY || process.env.GITHUB_TOKEN || '';
+  const auth = req.headers?.authorization || req.headers?.Authorization;
+  const alt = req.headers['x-openai-api-key'] || req.headers['x-proxy-api-key'];
+  const reqKey = (() => {
+    if (auth && /^Bearer\s+/i.test(auth)) {
+      const key = String(auth).replace(/^Bearer\s+/i, '').trim();
+      if (key) return key;
+    }
+    if (alt) return Array.isArray(alt) ? String(alt[0]) : String(alt);
+    return '';
+  })();
+
+  switch (mode) {
+    case 'env':
+      return envKey;
+    case 'request':
+      return reqKey;
+    default: // prefer-request
+      return reqKey || envKey;
+  }
+}
+
+function getBaseUrlFromRequest(req) {
+  const allowOverride = String(process.env.ALLOW_BASE_URL_OVERRIDE || '').trim().toLowerCase();
+  const canOverride = (allowOverride === '1' || allowOverride === 'true' || allowOverride === 'yes' || allowOverride === 'on') && !STRICT_OPENAI_API;
+  if (canOverride) {
+    const headerUrl = req.headers['x-openai-base-url'];
+    if (headerUrl) return Array.isArray(headerUrl) ? String(headerUrl[0]) : String(headerUrl);
+  }
+  return process.env.OPENAI_BASE_URL || undefined;
+}
+
+function getClient(req) {
+  const apiKey = getApiKeyFromRequest(req);
+  if (!apiKey && !process.env.SUPPRESS_KEY_WARN) {
+    console.warn('[WARN] No API key provided; using empty key. Set OPENAI_API_KEY/GITHUB_TOKEN or send Authorization header.');
+  }
+  const baseURL = getBaseUrlFromRequest(req);
+  return new OpenAI({ apiKey, baseURL });
+}
 
 // Initialize limits handler
 const limitsHandler = new ModelLimitsHandler();
 
 // Simple health moved to /health (root serves UI)
 
+if (!STRICT_OPENAI_API) {
 // POST /v1/proxy
 // body: { model: string, input: string | messages, type: "chat" | "completion" }
 app.post("/v1/proxy", async (req, res) => {
@@ -74,7 +234,8 @@ app.post("/v1/proxy", async (req, res) => {
   const startTime = Date.now();
   
   try {
-    if (type === "chat") {
+  const client = getClient(req);
+  if (type === "chat") {
       const messages = Array.isArray(input) ? input : [{ role: "user", content: String(input) }];
       const response = await client.chat.completions.create({
         model,
@@ -102,8 +263,15 @@ app.post("/v1/proxy", async (req, res) => {
     const responseTime = Date.now() - startTime;
     limitsHandler.logUsage(model, { total_tokens: 0, prompt_tokens: 0, completion_tokens: 0 }, responseTime, err);
     
-    const message = err?.message || String(err);
-    return res.status(500).send({ error: message, details: err });
+    const statusCode = err?.status || err?.response?.status || 500;
+    return res.status(statusCode).json({
+      error: {
+        message: err?.message || String(err),
+        type: 'invalid_request_error',
+        param: null,
+        code: err?.code || null
+      }
+    });
   }
 });
 
@@ -117,7 +285,8 @@ app.post('/v1/test-model', async (req, res) => {
   console.log(`[TEST] Testing model: "${model}"`);
   
   try {
-    const response = await client.chat.completions.create({
+  const client = getClient(req);
+  const response = await client.chat.completions.create({
       model,
       messages: [{ role: "user", content: "Hello" }],
       max_tokens: 10,
@@ -145,7 +314,8 @@ app.post('/v1/simple-chat', async (req, res) => {
   console.log(`[SIMPLE] Chat request for model: "${model}" - "${message.substring(0, 50)}..."`);
   
   try {
-    const response = await client.chat.completions.create({
+  const client = getClient(req);
+  const response = await client.chat.completions.create({
       model,
       messages: [
         { role: "system", content: "You are a helpful assistant." },
@@ -178,10 +348,157 @@ app.get('/v1/history', (req, res) => {
   res.send(HISTORY);
 });
 
+// OpenAI Responses API - standard endpoint
+app.post('/v1/responses', async (req, res) => {
+  try {
+    const client = getClient(req);
+    const { stream, ...payload } = req.body || {};
+    if (stream) {
+      res.setHeader('Content-Type', 'text/event-stream');
+      res.setHeader('Cache-Control', 'no-cache, no-transform');
+      res.setHeader('Connection', 'keep-alive');
+      res.flushHeaders?.();
+
+      const responseStream = await client.responses.create({ ...payload, stream: true });
+      for await (const chunk of responseStream) {
+        try { res.write(`data: ${JSON.stringify(chunk)}\n\n`); } catch (_) { break; }
+      }
+      res.write('data: [DONE]\n\n');
+      res.end();
+      return;
+    }
+
+    const response = await client.responses.create(payload);
+    res.json(response);
+  } catch (err) {
+    const statusCode = err?.status || err?.response?.status || 500;
+    res.status(statusCode).json({
+      error: {
+        message: err?.message || String(err),
+        type: 'invalid_request_error',
+        param: null,
+        code: err?.code || null
+      }
+    });
+  }
+});
+
+// OpenAI Embeddings API - standard endpoint
+app.post('/v1/embeddings', async (req, res) => {
+  try {
+    const client = getClient(req);
+    const { model, input, ...other } = req.body || {};
+    if (!model || typeof input === 'undefined') {
+      return res.status(400).json({
+        error: { message: 'you must provide model and input', type: 'invalid_request_error', param: null, code: null }
+      });
+    }
+    const response = await client.embeddings.create({ model, input, ...other });
+    res.json(response);
+  } catch (err) {
+    const statusCode = err?.status || err?.response?.status || 500;
+    res.status(statusCode).json({
+      error: {
+        message: err?.message || String(err),
+        type: 'invalid_request_error',
+        param: null,
+        code: err?.code || null
+      }
+    });
+  }
+});
+
+// OpenAI Completions API (legacy) - compatible endpoint
+// Maps to chat.completions under the hood and transforms to text_completion format
+app.post('/v1/completions', async (req, res) => {
+  try {
+    const { model, prompt, stream = false, ...other } = req.body || {};
+    if (!model || typeof prompt === 'undefined') {
+      return res.status(400).json({
+        error: { message: 'you must provide model and prompt', type: 'invalid_request_error', param: null, code: null }
+      });
+    }
+
+    // Normalize prompt to chat messages
+    const messages = Array.isArray(prompt)
+      ? prompt.map((p) => ({ role: 'user', content: String(p) }))
+      : [{ role: 'user', content: String(prompt) }];
+
+    const client = getClient(req);
+
+    if (stream) {
+      res.setHeader('Content-Type', 'text/event-stream');
+      res.setHeader('Cache-Control', 'no-cache, no-transform');
+      res.setHeader('Connection', 'keep-alive');
+      res.flushHeaders?.();
+
+      try {
+        const responseStream = await client.chat.completions.create({
+          model,
+          messages,
+          stream: true,
+          ...other,
+        });
+
+        for await (const chunk of responseStream) {
+          const delta = chunk?.choices?.[0]?.delta?.content || '';
+          const done = chunk?.choices?.[0]?.finish_reason || null;
+          const payload = {
+            id: chunk?.id || undefined,
+            object: 'text_completion',
+            created: Math.floor(Date.now() / 1000),
+            model,
+            choices: [
+              {
+                text: delta || '',
+                index: 0,
+                logprobs: null,
+                finish_reason: done,
+              },
+            ],
+          };
+          try { res.write(`data: ${JSON.stringify(payload)}\n\n`); } catch (_) { break; }
+        }
+        res.write('data: [DONE]\n\n');
+        res.end();
+      } catch (err) {
+        const statusCode = err?.status || err?.response?.status || 500;
+        if (!res.headersSent) {
+          return res.status(statusCode).json({
+            error: { message: err?.message || String(err), type: 'invalid_request_error', param: null, code: err?.code || null },
+          });
+        }
+        try { res.end(); } catch (_) {}
+      }
+      return;
+    }
+
+    const response = await client.chat.completions.create({ model, messages, ...other });
+    const text = response?.choices?.[0]?.message?.content || '';
+    const finish = response?.choices?.[0]?.finish_reason || 'stop';
+    const payload = {
+      id: response?.id || undefined,
+      object: 'text_completion',
+      created: Math.floor(Date.now() / 1000),
+      model,
+      choices: [
+        { text, index: 0, logprobs: null, finish_reason: finish },
+      ],
+      usage: response?.usage,
+    };
+    res.json(payload);
+  } catch (err) {
+    const statusCode = err?.status || err?.response?.status || 500;
+    res.status(statusCode).json({
+      error: { message: err?.message || String(err), type: 'invalid_request_error', param: null, code: err?.code || null },
+    });
+  }
+});
+
 // Standard OpenAI API endpoint - FULL COMPATIBILITY
-app.post('/v1/chat/completions', async (req, res) => {
+async function handleChatCompletions(req, res) {
   const { model, messages, stream = false, ...otherOptions } = req.body;
-  
+
   if (!model) {
     return res.status(400).json({
       error: {
@@ -193,11 +510,23 @@ app.post('/v1/chat/completions', async (req, res) => {
     });
   }
 
+  // Guard against placeholder values like "<model-id>" or "<take id from /v1/models>"
+  if (typeof model === 'string' && /[<>]/.test(model)) {
+    return res.status(400).json({
+      error: {
+        message: "invalid model parameter: replace placeholder with a real model id (e.g., 'openai/gpt-4o-mini'); call /v1/models to list available ids",
+        type: "invalid_request_error",
+        param: "model",
+        code: "model_placeholder"
+      }
+    });
+  }
+
   if (!messages || !Array.isArray(messages)) {
     return res.status(400).json({
       error: {
         message: "you must provide a messages parameter",
-        type: "invalid_request_error", 
+        type: "invalid_request_error",
         param: "messages",
         code: null
       }
@@ -206,7 +535,7 @@ app.post('/v1/chat/completions', async (req, res) => {
 
   console.log(`[OPENAI-STD] Chat completions request for model: "${model}"`);
   const startTime = Date.now();
-  
+
   if (stream) {
     try {
       // Setup SSE headers
@@ -215,6 +544,7 @@ app.post('/v1/chat/completions', async (req, res) => {
       res.setHeader('Connection', 'keep-alive');
       res.flushHeaders?.();
 
+      const client = getClient(req);
       const responseStream = await client.chat.completions.create({
         model,
         messages,
@@ -255,26 +585,26 @@ app.post('/v1/chat/completions', async (req, res) => {
   }
 
   try {
+    const client = getClient(req);
     const response = await client.chat.completions.create({
       model,
       messages,
       ...otherOptions
     });
-    
+
     // Log successful usage
     const responseTime = Date.now() - startTime;
     limitsHandler.logUsage(model, response.usage, responseTime);
-    
+
     // Return exact OpenAI response format
     res.json(response);
-    
   } catch (err) {
     console.error("OpenAI standard API error", err);
-    
+
     // Log error usage
     const responseTime = Date.now() - startTime;
     limitsHandler.logUsage(model, { total_tokens: 0, prompt_tokens: 0, completion_tokens: 0 }, responseTime, err);
-    
+
     // Format error in OpenAI standard way
     const errorResponse = {
       error: {
@@ -284,17 +614,21 @@ app.post('/v1/chat/completions', async (req, res) => {
         code: err?.code || null
       }
     };
-    
+
     // Try to preserve original status code
     const statusCode = err?.status || err?.response?.status || 500;
     res.status(statusCode).json(errorResponse);
   }
-});
+}
+
+app.post('/v1/chat/completions', handleChatCompletions);
+// Alias for compatibility with UIs expecting /api/* paths
+app.post('/api/chat/completions', handleChatCompletions);
 
 // OpenAI Models endpoint - list available models
-app.get('/v1/models', async (req, res) => {
+async function handleModelsList(req, res) {
   console.log('[OPENAI-STD] Models list request');
-  
+
   const models = [
     // Всі 58 моделей з GitHub Models API
     { id: "ai21-labs/ai21-jamba-1.5-large", object: "model", created: 1677610602, owned_by: "ai21-labs" },
@@ -361,7 +695,11 @@ app.get('/v1/models', async (req, res) => {
     object: "list",
     data: models
   });
-});
+}
+
+app.get('/v1/models', handleModelsList);
+// Alias for compatibility
+app.get('/api/models', handleModelsList);
 
 // Model recommendations endpoint
 app.post("/v1/recommend-model", (req, res) => {
@@ -427,7 +765,6 @@ const client = new OpenAI({
   apiKey: 'dummy-key',
   baseURL: 'http://localhost:3010/v1'
 });
-
 async function main() {
   try {
     const response = await client.chat.completions.create({
@@ -551,6 +888,8 @@ curl -s -X POST "http://localhost:3010/v1/chat/completions" \\
     res.status(500).json({ error: error.message });
   }
 });
+
+    } // end of non-strict endpoints
 
 const port = process.env.PORT || 3010;
 app.listen(port, () => console.log(`OpenAI proxy listening on ${port}`));

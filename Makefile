@@ -45,6 +45,74 @@ stop: stop-if-running
 # Перезапустити сервер
 restart: stop chat
 
+# Перезапустити з TTS та ngrok (інтерактивно)
+restart-tts: stop
+	@echo "$(BLUE)🔄 Запуск AI чату з TTS проксируванням...$(NC)"
+	@$(MAKE) -s start-tts-server
+	@$(MAKE) -s wait-tts-ready
+	@echo ""
+	@echo "$(GREEN)🎉 Сервер готовий з TTS підтримкою!$(NC)"
+	@echo "$(BLUE)🌐 Простий чат з усіма 24 моделями: http://127.0.0.1:$(PORT)$(NC)"
+	@echo "$(BLUE)🤖 Підтримка OpenAI, Microsoft, AI21, Cohere, Meta, Mistral$(NC)"
+	@echo "$(BLUE)🔊 TTS доступний: http://127.0.0.1:$(PORT)/tts?text=привіт$(NC)"
+	@echo ""
+	@echo "$(YELLOW)🚀 Запуск ngrok для публічного доступу...$(NC)"
+	@$(MAKE) -s start-ngrok-interactive
+
+start-tts-server:
+	@echo "$(BLUE)🚀 Запускаю сервер з TTS проксируванням на порту $(PORT)...$(NC)"
+	@cd "$(SCRIPT_DIR)" && nohup env PORT="$(PORT)" ENABLE_TTS_PROXY=true TTS_PROXY_TARGET="http://127.0.0.1:8080" node server.js >> "$(LOG_FILE)" 2>&1 & echo $$! > "$(PID_FILE)"
+	@echo "$(GREEN)✅ Запущено з PID $$(cat $(PID_FILE))$(NC)"
+
+wait-tts-ready:
+	@echo "$(BLUE)🔍 Перевіряю готовність сервера з TTS...$(NC)"
+	@for i in $$(seq 1 30); do \
+		if curl -fsS --max-time 3 "http://127.0.0.1:$(PORT)$(HEALTH_PATH)" >/dev/null 2>&1; then \
+			echo "$(GREEN)✅ Health OK$(NC)"; \
+			if curl -fsS --max-time 3 "http://127.0.0.1:$(PORT)/simple.html" >/dev/null 2>&1; then \
+				echo "$(GREEN)✅ Simple chat OK$(NC)"; \
+			fi; \
+			if curl -fsS --max-time 3 "http://127.0.0.1:$(PORT)/tts" >/dev/null 2>&1; then \
+				echo "$(GREEN)✅ TTS proxy OK$(NC)"; \
+			else \
+				echo "$(YELLOW)⚠️  TTS proxy недоступний (контейнер не запущений?)$(NC)"; \
+			fi; \
+			exit 0; \
+		fi; \
+		sleep 1; \
+	done; \
+	echo "$(RED)❌ Сервер не відповідає після 30 секунд$(NC)"; \
+	exit 1
+
+start-ngrok-interactive:
+	@echo "$(BLUE)🌐 Запуск ngrok тунелю для порту $(PORT)...$(NC)"
+	@pkill -f "ngrok http" 2>/dev/null || true
+	@sleep 2
+	@echo "$(BLUE)🚀 Створюю тунель ngrok...$(NC)"
+	@cd "$(SCRIPT_DIR)" && nohup ngrok http $(PORT) --log=stdout > ngrok.log 2>&1 & echo $$! > ngrok.pid
+	@sleep 4
+	@if curl -s http://127.0.0.1:4040/api/tunnels > /dev/null 2>&1; then \
+		url=$$(curl -s http://127.0.0.1:4040/api/tunnels | python3 -c "import json,sys; data=json.load(sys.stdin); print(data['tunnels'][0]['public_url']) if data['tunnels'] else print('')" 2>/dev/null); \
+		if [ -n "$$url" ]; then \
+			echo "$(GREEN)✅ Ngrok запущено!$(NC)"; \
+			echo "$(BLUE)🌐 Публічний URL: $$url$(NC)"; \
+			echo "$(BLUE)🔗 API: $$url/v1/chat/completions$(NC)"; \
+			echo "$(BLUE)🔊 TTS: $$url/tts?text=привіт$(NC)"; \
+		fi; \
+	fi
+	@echo ""
+	@echo "$(GREEN)🔍 Переходжу в режим моніторингу запитів (Ctrl+C для виходу):$(NC)"
+	@echo "$(YELLOW)━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━$(NC)"
+	@echo ""
+	@trap 'echo "$(YELLOW)🛑 Завершую моніторинг...$(NC)"; exit 0' INT; \
+	if [ -f "$(LOG_FILE)" ]; then \
+		tail -f "$(LOG_FILE)"; \
+	else \
+		echo "$(YELLOW)⏳ Очікую створення логу server.log...$(NC)"; \
+		while [ ! -f "$(LOG_FILE)" ]; do sleep 1; done; \
+		tail -f "$(LOG_FILE)"; \
+	fi
+
 # Перевірити статус сервера
 status:
 	@echo "$(BLUE)📊 Статус сервера на порту $(PORT):$(NC)"
