@@ -1,0 +1,2147 @@
+<!DOCTYPE html>
+<html lang="uk">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+    <title>Голосовий асистент - Простий</title>
+    <meta name="theme-color" content="#000000">
+    <style>
+        :root {
+            --bg: #000000;
+            --bg-soft: #0a0a0a;
+            --card: #111111;
+            --ink: #ffffff;
+            --muted: #888888;
+            --line: rgba(255,255,255,0.08);
+            --accent: #00ff88;
+            --accent2: #00cc66;
+        }
+        
+        * { box-sizing: border-box; }
+        
+        html, body {
+            height: 100%;
+            margin: 0;
+            background: var(--bg);
+            color: var(--ink);
+            font-family: -apple-system, BlinkMacSystemFont, Inter, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+            -webkit-font-smoothing: antialiased;
+            overflow: hidden;
+        }
+        
+        .app {
+            height: 100vh;
+            height: 100svh; /* Safari support for small viewport height */
+            display: flex;
+            flex-direction: column;
+            background: var(--bg);
+            overflow: hidden;
+        }
+        
+        .header {
+            padding: 12px 16px;
+            background: rgba(0,0,0,0.95);
+            border-bottom: 1px solid var(--line);
+            backdrop-filter: blur(10px);
+        }
+        
+        .voice-controls {
+            display: flex;
+            gap: 8px;
+            align-items: center;
+            margin-left: 12px;
+        }
+        
+        .voice-control-btn {
+            width: 28px;
+            height: 28px;
+            border-radius: 50%;
+            border: 2px solid var(--line);
+            background: var(--card);
+            color: var(--muted);
+            cursor: pointer;
+            font-size: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.3s ease;
+        }
+        
+        .voice-control-btn.active {
+            background: var(--accent);
+            color: #000000;
+            border-color: var(--accent);
+        }
+        
+        .voice-control-btn.pending {
+            animation: pulse-small 1.5s infinite;
+            border-color: #ff9900;
+            color: #ff9900;
+        }
+        
+        .voice-control-btn.disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+        
+        .voice-control-btn:hover:not(.disabled) {
+            background: rgba(0,255,136,0.1);
+            border-color: var(--accent);
+        }
+        
+        @keyframes pulse-small {
+            0% { box-shadow: 0 0 0 0 rgba(255,153,0,0.4); }
+            70% { box-shadow: 0 0 0 6px rgba(255,153,0,0); }
+            100% { box-shadow: 0 0 0 0 rgba(255,153,0,0); }
+        }
+        
+        .header {
+            background: var(--card);
+            padding: 12px 16px;
+            border-bottom: 1px solid var(--line);
+            flex-shrink: 0;
+        }
+        
+        .header-row {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            justify-content: space-between;
+        }
+        
+        .header h1 {
+            margin: 0;
+            font-size: 14px;
+            display: flex;
+            align-items: center;
+            white-space: nowrap;
+            color: var(--accent);
+            font-weight: 700;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            padding: 4px 8px;
+            border-radius: 6px;
+        }
+        
+        .header h1.connected {
+            color: #00ff88;
+            text-shadow: 0 0 8px rgba(0, 255, 136, 0.6);
+        }
+        
+        .header h1.connecting {
+            color: #ffaa00;
+            text-shadow: 0 0 8px rgba(255, 170, 0, 0.6);
+            animation: pulse 1.5s infinite;
+        }
+        
+        .header h1.disconnected {
+            color: #ff4444;
+            text-shadow: 0 0 8px rgba(255, 68, 68, 0.6);
+        }
+        
+        .dot {
+            display: none; /* Remove the dot */
+        }
+        
+        select, button {
+            background: var(--card);
+            border: 1px solid var(--line);
+            color: var(--ink);
+            padding: 6px 10px;
+            border-radius: 6px;
+            font-size: 12px;
+            font-family: inherit;
+        }
+        
+        #modelSelect {
+            flex: 1;
+            min-width: 120px;
+            max-width: 200px;
+        }
+        
+        .voice-controls {
+            display: flex;
+            gap: 4px;
+            align-items: center;
+        }
+        
+        .chat {
+            flex: 1;
+            overflow-y: auto;
+            overflow-x: hidden;
+            padding: 16px;
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            min-height: 0;
+            -webkit-overflow-scrolling: touch;
+        }
+        
+        /* Hide scrollbar but keep scrolling */
+        .chat::-webkit-scrollbar {
+            display: none;
+        }
+        
+        .chat {
+            -ms-overflow-style: none;
+            scrollbar-width: none;
+        }
+        
+        .message {
+            padding: 12px 16px;
+            border-radius: 12px;
+            max-width: 85%;
+            word-wrap: break-word;
+        }
+        
+        .message.user {
+            background: var(--accent);
+            color: #000000;
+            align-self: flex-end;
+            margin-left: auto;
+        }
+        
+        .message.assistant {
+            background: var(--card);
+            color: var(--ink);
+            align-self: flex-start;
+            border: 1px solid var(--line);
+        }
+        
+        .message.error {
+            background: rgba(255,68,68,0.1);
+            color: #ff4444;
+            border: 1px solid #ff4444;
+            align-self: center;
+            text-align: center;
+        }
+        
+        .input-area {
+            padding: 16px;
+            background: rgba(0,0,0,0.95);
+            border-top: 1px solid var(--line);
+        }
+        
+        .input-container {
+            position: relative;
+            display: flex;
+            gap: 8px;
+            align-items: center;
+        }
+        
+        .input {
+            flex: 1;
+            background: var(--card);
+            border: 1px solid var(--line);
+            color: var(--ink);
+            padding: 12px 16px;
+            border-radius: 12px;
+            font-size: 16px;
+            font-family: inherit;
+            outline: none;
+        }
+        
+        .input:focus {
+            border-color: var(--accent);
+            box-shadow: 0 0 0 2px rgba(0,255,136,0.1);
+        }
+        
+        .input.has-text {
+            background: linear-gradient(90deg, rgba(0,255,136,0.05), var(--card));
+            border-color: rgba(0,255,136,0.3);
+        }
+        
+        .send-btn {
+            background: var(--accent);
+            color: #000000;
+            border: none;
+            width: 44px;
+            height: 44px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            font-size: 18px;
+        }
+        
+        .send-btn:hover {
+            background: var(--accent2);
+        }
+        
+        .send-btn:disabled {
+            background: var(--muted);
+            cursor: not-allowed;
+        }
+        
+        .loading {
+            text-align: center;
+            padding: 20px;
+            color: var(--muted);
+        }
+        
+        .voice-btn {
+            background: var(--accent);
+            color: #000000;
+            border: none;
+            width: 44px;
+            height: 44px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            font-size: 18px;
+            margin-left: 8px;
+        }
+        
+        .voice-btn.active {
+            animation: pulse 1.5s infinite;
+            background: #ff4444;
+        }
+        
+        .voice-btn.listening {
+            animation: pulse 1.2s infinite;
+            background: #44ff44;
+            box-shadow: 0 0 15px rgba(68, 255, 68, 0.6);
+        }
+        
+        .voice-btn.speaking {
+            animation: pulse 0.8s infinite;
+            background: #4444ff;
+            box-shadow: 0 0 15px rgba(68, 68, 255, 0.6);
+        }
+        
+        .voice-btn.ready {
+            background: #666;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+        }
+        
+        .voice-btn.ready:hover {
+            background: #777;
+        }
+        
+        .stop-dialog-btn {
+            background: #ff4444;
+            color: white;
+            border: none;
+            border-radius: 50%;
+            width: 45px;
+            height: 45px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-size: 16px;
+            margin-left: 8px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 2px 8px rgba(255, 68, 68, 0.3);
+        }
+        
+        .stop-dialog-btn:hover {
+            background: #ff6666;
+            transform: scale(1.05);
+            box-shadow: 0 4px 12px rgba(255, 68, 68, 0.5);
+        }
+        
+        .stop-dialog-btn:active {
+            transform: scale(0.95);
+        }
+        
+        .volume-indicator {
+            position: fixed;
+            bottom: 90px; /* Піднято вище щоб не лягало на кнопки */
+            right: 20px;
+            width: 60px;
+            height: 60px;
+            background: rgba(0, 0, 0, 0.8);
+            border-radius: 50%;
+            display: none;
+            align-items: center;
+            justify-content: center;
+            font-size: 20px;
+            color: var(--accent);
+            border: 2px solid var(--accent);
+            z-index: 1000;
+            transition: all 0.2s ease;
+        }
+        
+        .volume-indicator.active {
+            display: flex;
+            animation: volumePulse 0.5s ease-in-out;
+        }
+        
+        @keyframes volumePulse {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.1); }
+            100% { transform: scale(1); }
+        }
+        
+        .big-stop-voice-btn {
+            background: rgba(255, 68, 68, 0.08); /* Дуже легка червона димка */
+            color: rgba(255, 255, 255, 0.9);
+            border: 1px solid rgba(255, 68, 68, 0.2); /* Тонша рамка */
+            border-radius: 12px;
+            width: 100%;
+            height: 50px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-size: 16px;
+            font-weight: 400; /* Менш жирний текст */
+            margin: 8px 0;
+            display: block;
+            align-items: center;
+            justify-content: center;
+            backdrop-filter: blur(1px); /* Менше розмиття */
+            text-shadow: 0 1px 2px rgba(0,0,0,0.3);
+        }
+        
+        .big-stop-voice-btn:hover {
+            background: rgba(255, 68, 68, 0.12);
+            border-color: rgba(255, 68, 68, 0.3);
+            color: rgba(255, 255, 255, 1);
+        }
+        
+        .big-stop-voice-btn:active {
+            background: rgba(255, 68, 68, 0.15);
+        }
+        
+        .tts-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0,0,0,0.9);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+            backdrop-filter: blur(4px);
+        }
+        
+        .tts-content {
+            background: var(--card);
+            padding: 24px;
+            border-radius: 16px;
+            text-align: center;
+            border: 1px solid var(--line);
+            max-width: 300px;
+        }
+        
+        .tts-content h3 {
+            margin: 0 0 16px 0;
+            color: var(--accent);
+        }
+        
+        .tts-content p {
+            margin: 0 0 20px 0;
+            color: var(--muted);
+            font-size: 14px;
+        }
+        
+        .tts-btn {
+            background: var(--accent);
+            color: #000000;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 8px;
+            font-size: 16px;
+            cursor: pointer;
+            margin: 0 8px;
+        }
+        
+        @keyframes pulse {
+            0% { box-shadow: 0 0 0 0 rgba(255,68,68,0.4); }
+            70% { box-shadow: 0 0 0 10px rgba(255,68,68,0); }
+            100% { box-shadow: 0 0 0 0 rgba(255,68,68,0); }
+        }
+        
+        @keyframes pulse {
+            0% { box-shadow: 0 0 0 0 rgba(0,255,136,0.4); }
+            70% { box-shadow: 0 0 0 10px rgba(0,255,136,0); }
+            100% { box-shadow: 0 0 0 0 rgba(0,255,136,0); }
+        }
+        
+        .model-info {
+            display: none;
+            position: absolute;
+            bottom: 60px;
+            left: 16px;
+            right: 16px;
+            background: var(--card);
+            border: 1px solid var(--line);
+            border-radius: 12px;
+            padding: 16px;
+            font-size: 14px;
+            color: var(--muted);
+            z-index: 100;
+            max-height: 120px;
+            overflow-y: auto;
+            transition: opacity 0.3s ease;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.3);
+            backdrop-filter: blur(10px);
+        }
+        
+        .model-info::-webkit-scrollbar {
+            display: none;
+        }
+        
+        .model-info {
+            -ms-overflow-style: none;
+            scrollbar-width: none;
+        }
+        
+        @media (max-width: 768px) {
+            .header-row {
+                gap: 4px;
+                justify-content: space-between;
+            }
+            
+            .header h1 {
+                font-size: 12px;
+                padding: 2px 6px;
+            }
+            
+            #modelSelect {
+                flex: 1;
+                min-width: 100px;
+                max-width: 150px;
+                font-size: 11px;
+                padding: 4px 6px;
+            }
+            
+            .voice-controls {
+                gap: 2px;
+            }
+            
+            .voice-control-btn {
+                width: 24px;
+                height: 24px;
+                font-size: 10px;
+            }
+            
+            .model-info {
+                left: 8px;
+                right: 8px;
+                margin: 0;
+            }
+            
+            .input-area {
+                padding: 8px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="app">
+        <div class="header">
+            <div class="header-row">
+                <h1 class="connected">
+                    ATLAS
+                </h1>
+                <select id="modelSelect">
+                    <optgroup label="🤖 OpenAI">
+                        <option value="openai/gpt-4o-mini">OpenAI GPT-4o Mini</option>
+                        <option value="openai/gpt-4o">OpenAI GPT-4o (найпотужніша)</option>
+                        <option value="gpt-4o-mini">GPT-4o Mini (коротка назва)</option>
+                        <option value="gpt-4o">GPT-4o (коротка назва)</option>
+                    </optgroup>
+                    <optgroup label="🧠 Microsoft Phi">
+                        <option value="microsoft/Phi-3.5-mini-instruct">Phi-3.5 Mini (найновіша)</option>
+                        <option value="microsoft/Phi-3-mini-4k-instruct">Phi-3 Mini 4K (базова)</option>
+                        <option value="Phi-3.5-mini-instruct">Phi-3.5 Mini (коротка)</option>
+                        <option value="Phi-3-mini-4k-instruct">Phi-3 Mini 4K (коротка)</option>
+                        <option value="Phi-3-medium-4k-instruct">Phi-3 Medium (коротка)</option>
+                        <option value="microsoft/Phi-3.5-MoE-instruct">Phi-3.5 MoE (експерти)</option>
+                        <option value="microsoft/Phi-3.5-vision-instruct">Phi-3.5 Vision (зображення)</option>
+                        <option value="microsoft/Phi-3-small-8k-instruct">Phi-3 Small 8K</option>
+                        <option value="microsoft/Phi-3-small-128k-instruct">Phi-3 Small 128K (довгий контекст)</option>
+                        <option value="microsoft/Phi-3-medium-4k-instruct">Phi-3 Medium 4K</option>
+                        <option value="microsoft/Phi-3-medium-128k-instruct">Phi-3 Medium 128K (довгий контекст)</option>
+                        <option value="Phi-3-small-8k-instruct">Phi-3 Small 8K (коротка)</option>
+                        <option value="Phi-3-small-128k-instruct">Phi-3 Small 128K (коротка)</option>
+                        <option value="Phi-3-medium-128k-instruct">Phi-3 Medium 128K (коротка)</option>
+                    </optgroup>
+                    <optgroup label="🚀 AI21 Jamba">
+                        <option value="AI21-Jamba-1.5-Large">Jamba 1.5 Large</option>
+                        <option value="AI21-Jamba-1.5-Mini">Jamba 1.5 Mini</option>
+                    </optgroup>
+                    <optgroup label="💬 Cohere Command">
+                        <option value="Cohere-command-r-08-2024">Command R</option>
+                        <option value="Cohere-command-r-plus-08-2024">Command R+ (покращена)</option>
+                    </optgroup>
+                    <optgroup label="🦙 Meta Llama">
+                        <option value="Meta-Llama-3.1-8B-Instruct">Llama 3.1 8B</option>
+                        <option value="Meta-Llama-3.1-405B-Instruct">Llama 3.1 405B (найбільша!)</option>
+                    </optgroup>
+                    <optgroup label="🌊 Mistral">
+                        <option value="Mistral-Nemo">Mistral Nemo</option>
+                    </optgroup>
+                </select>
+                <div class="voice-controls">
+                    <div class="voice-control-btn pending" id="ttsControlBtn" title="Увімкнути озвучування">🔊</div>
+                    <div class="voice-control-btn pending" id="sttControlBtn" title="Увімкнути мікрофон">🎤</div>
+                    <div class="voice-control-btn disabled" id="voiceOnlyBtn" title="Голосовий режим">🎭</div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="model-info" id="modelInfo">
+            <div id="modelDescription">Виберіть модель для відображення інформації</div>
+        </div>
+        
+        <div class="chat" id="chat"></div>
+        
+        <div class="input-area">
+            <div class="input-container">
+                <input 
+                    type="text" 
+                    class="input" 
+                    id="messageInput"
+                    placeholder="Введіть повідомлення..."
+                    autocomplete="off"
+                >
+                <button class="send-btn" id="sendBtn">📤</button>
+                <button class="voice-btn" id="voiceBtn">🎤</button>
+            </div>
+        </div>
+        
+        <!-- Volume indicator -->
+        <div class="volume-indicator" id="volumeIndicator">🎤</div>
+    </div>
+
+    <script>
+        class SimpleChat {
+            constructor() {
+                this.chat = document.getElementById('chat');
+                this.input = document.getElementById('messageInput');
+                this.sendBtn = document.getElementById('sendBtn');
+                this.voiceBtn = document.getElementById('voiceBtn');
+                this.modelSelect = document.getElementById('modelSelect');
+                this.modelInfo = document.getElementById('modelInfo');
+                this.modelDescription = document.getElementById('modelDescription');
+                this.atlasTitle = document.querySelector('.header h1');
+                
+                // Connection status
+                this.connectionStatus = 'connected'; // connected, connecting, disconnected
+                
+                // Voice control buttons
+                this.ttsControlBtn = document.getElementById('ttsControlBtn');
+                this.sttControlBtn = document.getElementById('sttControlBtn');
+                this.voiceOnlyBtn = document.getElementById('voiceOnlyBtn');
+                this.volumeIndicator = document.getElementById('volumeIndicator');
+                
+                this.messages = [];
+                this.isLoading = false;
+                this.isListening = false;
+                this.ttsEnabled = false;
+                this.sttEnabled = false;
+                this.voiceOnlyMode = false;
+                this.isContinuousListening = false;
+                this.isTTSSpeaking = false;
+                this.isCollectingSpeech = false;
+                this.speechCollectionTimer = null;
+                this.speechDetectionCount = 0;
+                this.speechDetectionThreshold = 1;
+                this.modelInfoTimeout = null;
+                this.currentTranscript = '';
+                this.speechStartTime = null;
+                this.minimumInterruptDuration = 2000; // 2 seconds in milliseconds (змінено з 3 на 2)
+                this.audioContext = null;
+                this.analyser = null;
+                this.microphone = null;
+                this.voiceActivated = false;
+                this.volumeThreshold = 30; // Volume threshold for voice activation
+                this.vadCheckInterval = null;
+                this.volumeHideTimer = null;
+                this.sttStateBeforeVoiceMode = false; // Зберігаємо стан STT перед голосовим режимом
+                
+                this.modelDescriptions = {
+                    // OpenAI models
+                    'openai/gpt-4o-mini': 'OpenAI GPT-4o Mini - швидка й ефективна модель. Оптимальна для більшості завдань.',
+                    'openai/gpt-4o': 'OpenAI GPT-4o - найпотужніша модель OpenAI. Найкраща для складних завдань і міркувань.',
+                    'gpt-4o-mini': 'GPT-4o Mini (коротка назва) - швидка й ефективна модель OpenAI.',
+                    'gpt-4o': 'GPT-4o (коротка назва) - найпотужніша модель OpenAI для складних завдань.',
+                    
+                    // Microsoft Phi models
+                    'microsoft/Phi-3.5-mini-instruct': 'Phi-3.5 Mini - найновіша компактна модель Microsoft з відмінним співвідношенням швидкості та якості.',
+                    'microsoft/Phi-3-mini-4k-instruct': 'Phi-3 Mini 4K - базова міні-модель Microsoft з контекстом 4K токенів.',
+                    'Phi-3.5-mini-instruct': 'Phi-3.5 Mini (коротка назва) - найновіша компактна модель Microsoft.',
+                    'Phi-3-mini-4k-instruct': 'Phi-3 Mini 4K (коротка назва) - базова міні-модель з контекстом 4K.',
+                    'Phi-3-medium-4k-instruct': 'Phi-3 Medium (коротка назва) - середня модель Microsoft з збалансованими характеристиками.',
+                    'microsoft/Phi-3.5-MoE-instruct': 'Phi-3.5 MoE - модель з експертними блоками (Mixture of Experts) для спеціалізованих завдань.',
+                    'microsoft/Phi-3.5-vision-instruct': 'Phi-3.5 Vision - модель з підтримкою зображень. Може аналізувати картинки та фото.',
+                    'microsoft/Phi-3-small-8k-instruct': 'Phi-3 Small 8K - мала модель з розширеним контекстом 8K токенів.',
+                    'microsoft/Phi-3-small-128k-instruct': 'Phi-3 Small 128K - мала модель з дуже довгим контекстом 128K токенів. Ідеальна для довгих документів.',
+                    'microsoft/Phi-3-medium-4k-instruct': 'Phi-3 Medium 4K - середня модель Microsoft з збалансованими характеристиками.',
+                    'microsoft/Phi-3-medium-128k-instruct': 'Phi-3 Medium 128K - середня модель з дуже довгим контекстом 128K токенів. Потужна для складних завдань.',
+                    'Phi-3-small-8k-instruct': 'Phi-3 Small 8K (коротка назва) - мала модель з контекстом 8K токенів.',
+                    'Phi-3-small-128k-instruct': 'Phi-3 Small 128K (коротка назва) - мала модель з контекстом 128K токенів.',
+                    'Phi-3-medium-128k-instruct': 'Phi-3 Medium 128K (коротка назва) - середня модель з довгим контекстом 128K токенів.',
+                    
+                    // AI21 Jamba models
+                    'AI21-Jamba-1.5-Large': 'Jamba 1.5 Large - велика модель AI21 Labs з потужними можливостями.',
+                    'AI21-Jamba-1.5-Mini': 'Jamba 1.5 Mini - компактна модель AI21 Labs для швидких відповідей.',
+                    
+                    // Cohere Command models
+                    'Cohere-command-r-08-2024': 'Command R - стандартна модель від Cohere для роботи з текстом.',
+                    'Cohere-command-r-plus-08-2024': 'Command R+ - покращена версія Command R з кращими можливостями.',
+                    
+                    // Meta Llama models
+                    'Meta-Llama-3.1-8B-Instruct': 'Llama 3.1 8B - модель Meta з 8 мільярдів параметрів. Швидка та ефективна.',
+                    'Meta-Llama-3.1-405B-Instruct': 'Llama 3.1 405B - НАЙБІЛЬША модель з 405 мільярдів параметрів! Найрозумніша, але повільніша.',
+                    
+                    // Mistral models
+                    'Mistral-Nemo': 'Mistral Nemo - модель від Mistral AI з фокусом на якість відповідей.'
+                };
+                
+                this.initEventListeners();
+                this.initSpeech();
+                this.initVoiceControls();
+                
+                this.addMessage('assistant', 'Привіт! Я АТЛАС - ваш AI асистент з 25 моделями. Увімкніть голосові функції кнопками вгорі або просто використовуйте чат.');
+            }
+            
+            initEventListeners() {
+                this.sendBtn.addEventListener('click', () => this.sendMessage());
+                this.input.addEventListener('keypress', (e) => {
+                    if (e.key === 'Enter') this.sendMessage();
+                });
+                this.input.addEventListener('input', () => {
+                    this.input.classList.toggle('has-text', this.input.value.trim().length > 0);
+                });
+                this.voiceBtn.addEventListener('click', () => this.toggleVoice());
+                this.modelSelect.addEventListener('change', () => {
+                    this.updateModelInfo();
+                    this.showModelInfoTemporary();
+                });
+                
+                // Initialize model info
+                this.updateModelInfo();
+                
+                // Initialize connection status
+                this.updateConnectionStatus('connected');
+                this.checkConnectionStatus();
+                
+                // Check connection every 30 seconds
+                setInterval(() => this.checkConnectionStatus(), 30000);
+            }
+            
+            initVoiceControls() {
+                // TTS Control Button
+                this.ttsControlBtn.addEventListener('click', () => {
+                    if (this.ttsControlBtn.classList.contains('pending')) {
+                        this.enableTTS();
+                    } else {
+                        this.toggleTTS();
+                    }
+                });
+                
+                // STT Control Button  
+                this.sttControlBtn.addEventListener('click', () => {
+                    if (this.sttControlBtn.classList.contains('pending')) {
+                        this.enableSTT();
+                    } else {
+                        this.toggleSTT();
+                    }
+                });
+                
+                // Voice Only Button
+                this.voiceOnlyBtn.addEventListener('click', () => {
+                    if (!this.voiceOnlyBtn.classList.contains('disabled')) {
+                        this.toggleVoiceOnlyMode();
+                    }
+                });
+                
+                // ATLAS title click - adjust VAD sensitivity
+                this.atlasTitle.addEventListener('click', () => {
+                    this.adjustVADSensitivity();
+                });
+                
+                // Update voice only button state
+                this.updateVoiceOnlyButton();
+            }
+            
+            initSpeech() {
+                // Mobile-specific Speech Recognition setup
+                this.setupSpeechRecognition();
+                
+                // Speech Synthesis with mobile fixes
+                this.synthesis = window.speechSynthesis;
+                
+                // Fix for mobile TTS - load voices
+                if (this.synthesis) {
+                    this.loadVoices();
+                    if (speechSynthesis.onvoiceschanged !== undefined) {
+                        speechSynthesis.onvoiceschanged = () => this.loadVoices();
+                    }
+                }
+            }
+            
+            loadVoices() {
+                this.voices = this.synthesis.getVoices();
+                console.log('🔊 Available voices:', this.voices.length);
+                
+                // Find Ukrainian or English voice
+                this.ukrainianVoice = this.voices.find(voice => 
+                    voice.lang.includes('uk') || voice.lang.includes('UA')
+                );
+                this.englishVoice = this.voices.find(voice => 
+                    voice.lang.includes('en') && voice.lang.includes('US')
+                );
+                
+                console.log('🔊 Ukrainian voice:', this.ukrainianVoice?.name);
+                console.log('🔊 English voice:', this.englishVoice?.name);
+            }
+            
+            setupSpeechRecognition() {
+                const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+                if (!SpeechRecognition) {
+                    console.log('🎤 Speech Recognition not supported');
+                    return;
+                }
+                
+                this.recognition = new SpeechRecognition();
+                
+                // Mobile-optimized settings
+                this.recognition.continuous = false;
+                this.recognition.interimResults = true; // Enable interim results for mobile
+                this.recognition.lang = 'uk-UA';
+                
+                // Additional mobile settings
+                try {
+                    this.recognition.maxAlternatives = 1;
+                    this.recognition.serviceURI = ''; // Use default service
+                } catch (e) {
+                    console.log('🎤 Advanced settings not supported:', e.message);
+                }
+                
+                this.recognition.onstart = () => {
+                    console.log('🎤 Speech recognition started');
+                    this.isListening = true;
+                    this.voiceBtn.classList.add('active');
+                    this.voiceBtn.textContent = '🔴';
+                    
+                    // Mobile vibration feedback if available
+                    if ('vibrate' in navigator) {
+                        navigator.vibrate(100);
+                    }
+                };
+                
+                this.recognition.onresult = (event) => {
+                    console.log('🎤 Speech recognition result received');
+                    
+                    // Additional self-listening prevention - ignore very short results during TTS
+                    if (this.isTTSSpeaking && this.synthesis && this.synthesis.speaking) {
+                        let totalLength = 0;
+                        for (let i = event.resultIndex; i < event.results.length; i++) {
+                            totalLength += event.results[i][0].transcript.length;
+                        }
+                        
+                        // Ignore very short recognition results during TTS (likely echo)
+                        if (totalLength < 3) {
+                            console.log('🎤 Ignoring very short result during TTS (likely echo)');
+                            return;
+                        }
+                    }
+                    
+                    let finalTranscript = '';
+                    let interimTranscript = '';
+                    
+                    for (let i = event.resultIndex; i < event.results.length; i++) {
+                        const transcript = event.results[i][0].transcript;
+                        if (event.results[i].isFinal) {
+                            finalTranscript += transcript;
+                        } else {
+                            interimTranscript += transcript;
+                        }
+                    }
+                    
+                    // Check if TTS is currently speaking - route to interruption logic
+                    if (this.isTTSSpeaking && this.synthesis && this.synthesis.speaking) {
+                        // If TTS is actively speaking, route through our new detection logic
+                        console.log('🎤 Processing speech during TTS (potential interruption)');
+                        this.handleSpeechDetected(finalTranscript, interimTranscript);
+                        return;
+                    }
+                    
+                    // Show interim results (normal mode - no TTS active)
+                    if (interimTranscript) {
+                        this.input.value = interimTranscript;
+                        this.input.style.fontStyle = 'italic';
+                        this.input.style.opacity = '0.7';
+                    }
+                    
+                    // Use final result (normal mode - no TTS active)
+                    if (finalTranscript) {
+                        console.log('🎤 Final transcript:', finalTranscript);
+                        this.input.value = finalTranscript;
+                        this.input.style.fontStyle = 'normal';
+                        this.input.style.opacity = '1';
+                        this.input.classList.add('has-text');
+                        
+                        // Mobile vibration feedback
+                        if ('vibrate' in navigator) {
+                            navigator.vibrate(200);
+                        }
+                        
+                        // Auto-send in voice-only mode or desktop, manual on mobile chat mode
+                        if (this.voiceOnlyMode || (!this.isMobile() && !this.voiceOnlyMode)) {
+                            setTimeout(() => this.sendMessage(), 500);
+                        }
+                    }
+                };
+                
+                this.recognition.onend = () => {
+                    console.log('🎤 Speech recognition ended');
+                    this.isListening = false;
+                    this.voiceBtn.classList.remove('active');
+                    this.voiceBtn.textContent = '🎤';
+                    
+                    // Reset input style
+                    this.input.style.fontStyle = 'normal';
+                    this.input.style.opacity = '1';
+                };
+                
+                this.recognition.onerror = (event) => {
+                    console.error('🎤 Speech recognition error:', event.error, event);
+                    this.isListening = false;
+                    this.voiceBtn.classList.remove('active');
+                    this.voiceBtn.textContent = '🎤';
+                    
+                    // Reset input style
+                    this.input.style.fontStyle = 'normal';
+                    this.input.style.opacity = '1';
+                    
+                    let errorMsg = 'Помилка розпізнавання голосу';
+                    switch (event.error) {
+                        case 'not-allowed':
+                        case 'permission-denied':
+                            errorMsg = 'Доступ до мікрофона заборонено. Натисніть на замок біля адресного рядка та дозвольте доступ до мікрофона.';
+                            break;
+                        case 'no-speech':
+                            errorMsg = 'Мова не розпізнана. Спробуйте говорити голосніше та чіткіше.';
+                            break;
+                        case 'network':
+                            errorMsg = 'Помилка мережі. Перевірте інтернет-з\'єднання та спробуйте знову.';
+                            break;
+                        case 'audio-capture':
+                            errorMsg = 'Мікрофон недоступний. Перевірте підключення мікрофона.';
+                            break;
+                        case 'aborted':
+                            return; // Don't show error for user-initiated stop
+                    }
+                    this.addMessage('error', errorMsg);
+                };
+            }
+            
+            isMobile() {
+                return /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+            }
+            
+            async toggleVoice() {
+                if (!this.sttEnabled) {
+                    this.addMessage('error', 'Спочатку увімкніть мікрофон кнопкою 🎤 вгорі');
+                    return;
+                }
+                
+                if (!this.recognition) {
+                    this.addMessage('error', 'Розпізнавання голосу не підтримується в цьому браузері. Спробуйте Chrome, Edge або Safari.');
+                    return;
+                }
+                
+                if (this.isListening) {
+                    console.log('🎤 Stopping speech recognition...');
+                    this.recognition.stop();
+                    return;
+                }
+                
+                try {
+                    console.log('🎤 Starting speech recognition...');
+                    
+                    // Clear any previous input styling
+                    this.input.style.fontStyle = 'normal';
+                    this.input.style.opacity = '1';
+                    
+                    this.recognition.start();
+                    
+                } catch (error) {
+                    console.error('🎤 Error starting recognition:', error);
+                    
+                    let errorMsg = 'Не вдалося запустити розпізнавання голосу.';
+                    if (error.message && error.message.includes('already started')) {
+                        errorMsg = 'Розпізнавання голосу вже активне. Зачекайте або перезавантажте сторінку.';
+                    }
+                    
+                    this.addMessage('error', errorMsg);
+                }
+            }
+            
+            speak(text) {
+                if (!this.synthesis || !this.ttsEnabled || !text || text.trim().length === 0) {
+                    return;
+                }
+                
+                console.log('🔊 Starting TTS for:', text.substring(0, 50) + '...');
+                
+                // Cancel any ongoing speech
+                this.synthesis.cancel();
+                
+                // Mobile fix: small delay to ensure cancel worked
+                setTimeout(() => {
+                    const utterance = new SpeechSynthesisUtterance(text);
+                    
+                    // Set language and voice
+                    const isUkrainian = /[а-яїієґ]/i.test(text);
+                    if (isUkrainian && this.ukrainianVoice) {
+                        utterance.voice = this.ukrainianVoice;
+                        utterance.lang = 'uk-UA';
+                    } else if (!isUkrainian && this.englishVoice) {
+                        utterance.voice = this.englishVoice;
+                        utterance.lang = 'en-US';
+                    } else {
+                        utterance.lang = isUkrainian ? 'uk-UA' : 'en-US';
+                    }
+                    
+                    // Mobile-optimized settings
+                    utterance.rate = this.isMobile() ? 0.8 : 0.9;  // Slower on mobile
+                    utterance.volume = 0.8;
+                    utterance.pitch = 1.0;
+                    
+                    // Event handlers for debugging and voice mode
+                    utterance.onstart = () => {
+                        console.log('🔊 TTS started:', utterance.lang, utterance.voice?.name);
+                        this.isTTSSpeaking = true;
+                        
+                        if (this.voiceOnlyMode) {
+                            // In pure voice mode, allow interruption but ignore TTS self-speech
+                            // Don't completely disable mic - just mark TTS as speaking for filtering
+                            this.disableInputDuringTTS();
+                            this.updateSingleVoiceButton();
+                            console.log('🎤 TTS started - mic active but filtering TTS speech, allowing interruption');
+                        }
+                    };
+                    
+                    utterance.onend = () => {
+                        console.log('🔊 TTS ended');
+                        this.isTTSSpeaking = false;
+                        this.speechStartTime = null; // Reset speech timing when TTS ends
+                        
+                        if (this.voiceOnlyMode) {
+                            // In pure voice mode, continue listening after TTS ends
+                            this.enableInputAfterTTS();
+                            this.updateSingleVoiceButton();
+                            console.log('🎤 TTS ended - mic continues listening in voice mode');
+                        }
+                    };
+                    
+                    utterance.onerror = (event) => {
+                        console.error('🔊 TTS error:', event.error, event);
+                        
+                        // Try fallback without specific voice on error
+                        if (event.error === 'voice-unavailable' && utterance.voice) {
+                            console.log('🔊 Retrying TTS without specific voice...');
+                            const fallbackUtterance = new SpeechSynthesisUtterance(text);
+                            fallbackUtterance.lang = utterance.lang;
+                            fallbackUtterance.rate = utterance.rate;
+                            fallbackUtterance.volume = utterance.volume;
+                            this.synthesis.speak(fallbackUtterance);
+                        }
+                    };
+                    
+                    utterance.onboundary = (event) => {
+                        if (event.name === 'sentence') {
+                            console.log('🔊 TTS sentence boundary');
+                        }
+                    };
+                    
+                    try {
+                        this.synthesis.speak(utterance);
+                        
+                        // Mobile fix: check if synthesis started
+                        if (this.isMobile()) {
+                            setTimeout(() => {
+                                if (this.synthesis.pending === false && this.synthesis.speaking === false) {
+                                    console.log('🔊 TTS failed to start on mobile, retrying...');
+                                    this.synthesis.speak(utterance);
+                                }
+                            }, 100);
+                        }
+                        
+                    } catch (error) {
+                        console.error('🔊 TTS speak error:', error);
+                    }
+                    
+                }, this.isMobile() ? 200 : 50);
+            }
+            
+            // Voice Control Methods
+            async enableTTS() {
+                console.log('🔊 Enabling TTS...');
+                
+                if (!this.synthesis) {
+                    this.addMessage('error', 'Синтез мови не підтримується в цьому браузері');
+                    return;
+                }
+                
+                // First mark as pending while we test
+                this.ttsControlBtn.classList.remove('pending');
+                this.ttsControlBtn.classList.add('active');
+                this.ttsControlBtn.style.opacity = '0.5';
+                this.ttsControlBtn.title = 'Активація TTS...';
+                
+                // Load voices if not loaded
+                if (!this.voices || this.voices.length === 0) {
+                    this.loadVoices();
+                }
+                
+                // Test TTS activation - this is crucial for mobile browsers
+                const testUtterance = new SpeechSynthesisUtterance('TTS активовано');
+                testUtterance.volume = 0.5;
+                testUtterance.rate = 1.2;
+                testUtterance.pitch = 1.0;
+                
+                // Set language
+                const isUkrainian = true;
+                if (isUkrainian && this.ukrainianVoice) {
+                    testUtterance.voice = this.ukrainianVoice;
+                    testUtterance.lang = 'uk-UA';
+                } else if (!isUkrainian && this.englishVoice) {
+                    testUtterance.voice = this.englishVoice;
+                    testUtterance.lang = 'en-US';
+                } else {
+                    testUtterance.lang = 'uk-UA';
+                }
+                
+                testUtterance.onstart = () => {
+                    console.log('🔊 TTS activation test started');
+                    this.ttsEnabled = true;
+                    this.ttsControlBtn.style.opacity = '1';
+                    this.ttsControlBtn.title = 'Вимкнути озвучування';
+                };
+                
+                testUtterance.onend = () => {
+                    console.log('🔊 TTS successfully activated and tested');
+                    this.addMessage('assistant', '🔊 Озвучування увімкнено та протестовано');
+                    this.updateVoiceOnlyButton();
+                };
+                
+                testUtterance.onerror = (event) => {
+                    console.error('🔊 TTS activation failed:', event);
+                    this.ttsControlBtn.classList.remove('active');
+                    this.ttsControlBtn.classList.add('pending');
+                    this.ttsControlBtn.style.opacity = '1';
+                    this.ttsControlBtn.title = 'Спробувати знову';
+                    this.ttsEnabled = false;
+                    
+                    this.addMessage('error', `Не вдалося активувати TTS: ${event.error}. Спробуйте ще раз.`);
+                };
+                
+                try {
+                    console.log('🔊 Starting TTS test utterance...');
+                    this.synthesis.speak(testUtterance);
+                    
+                    // Fallback check for mobile browsers that don't fire events properly
+                    setTimeout(() => {
+                        if (!this.synthesis.speaking && !this.synthesis.pending) {
+                            console.log('🔊 TTS seems to have failed silently, enabling anyway...');
+                            this.ttsEnabled = true;
+                            this.ttsControlBtn.style.opacity = '1';
+                            this.ttsControlBtn.title = 'Вимкнути озвучування';
+                            this.addMessage('assistant', '🔊 TTS увімкнено (може потребувати додаткової взаємодії на мобільному)');
+                            this.updateVoiceOnlyButton();
+                        }
+                    }, 2000);
+                    
+                } catch (error) {
+                    console.error('🔊 TTS activation error:', error);
+                    this.ttsControlBtn.classList.remove('active');
+                    this.ttsControlBtn.classList.add('pending');
+                    this.ttsControlBtn.style.opacity = '1';
+                    this.ttsEnabled = false;
+                    this.addMessage('error', `Помилка активації TTS: ${error.message}`);
+                }
+            }
+            
+            toggleTTS() {
+                this.ttsEnabled = !this.ttsEnabled;
+                
+                if (this.ttsEnabled) {
+                    this.ttsControlBtn.classList.add('active');
+                    this.ttsControlBtn.title = 'Вимкнути озвучування';
+                } else {
+                    this.ttsControlBtn.classList.remove('active');
+                    this.ttsControlBtn.title = 'Увімкнути озвучування';
+                    // Stop any ongoing speech
+                    if (this.synthesis) {
+                        this.synthesis.cancel();
+                    }
+                }
+                
+                this.updateVoiceOnlyButton();
+            }
+            
+            async enableSTT() {
+                console.log('🎤 Enabling STT...');
+                
+                if (!this.recognition) {
+                    this.addMessage('error', 'Розпізнавання мови не підтримується в цьому браузері');
+                    return;
+                }
+                
+                try {
+                    // Request microphone permission
+                    if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
+                        const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+                        stream.getTracks().forEach(track => track.stop());
+                        
+                        // Initialize Voice Activity Detection
+                        const vadInitialized = await this.initVoiceActivation();
+                        
+                        this.sttEnabled = true;
+                        this.sttControlBtn.classList.remove('pending');
+                        this.sttControlBtn.classList.add('active');
+                        this.sttControlBtn.title = 'Вимкнути мікрофон';
+                        
+                        console.log('🎤 STT enabled successfully');
+                        
+                        if (vadInitialized) {
+                            console.log('🎤 Voice Activity Detection initialized');
+                            this.startVoiceActivationDetection();
+                        }
+                        
+                        this.updateVoiceOnlyButton();
+                        
+                    } else {
+                        throw new Error('getUserMedia not supported');
+                    }
+                } catch (error) {
+                    console.error('🎤 STT permission error:', error);
+                    
+                    let errorMsg = 'Не вдалося увімкнути мікрофон.';
+                    if (error.name === 'NotAllowedError') {
+                        errorMsg = 'Доступ до мікрофона заборонено. Натисніть на замок біля адреси та дозвольте доступ до мікрофона.';
+                    }
+                    
+                    this.addMessage('error', errorMsg);
+                }
+            }
+            
+            toggleSTT() {
+                this.sttEnabled = !this.sttEnabled;
+                
+                if (this.sttEnabled) {
+                    this.sttControlBtn.classList.add('active');
+                    this.sttControlBtn.title = 'Вимкнути мікрофон';
+                    this.startVoiceActivationDetection();
+                } else {
+                    this.sttControlBtn.classList.remove('active');
+                    this.sttControlBtn.title = 'Увімкнути мікрофон';
+                    this.stopVoiceActivationDetection();
+                    // Stop any ongoing recognition
+                    if (this.isListening) {
+                        this.recognition.stop();
+                    }
+                }
+                
+                this.updateVoiceOnlyButton();
+            }
+            
+            toggleVoiceOnly() {
+                this.voiceOnlyMode = !this.voiceOnlyMode;
+                
+                if (this.voiceOnlyMode) {
+                    this.voiceOnlyBtn.classList.add('active');
+                    this.voiceOnlyBtn.title = 'Вимкнути голосовий режим';
+                    this.addMessage('assistant', '🎙️ Голосовий режим увімкнено. Говоріть для спілкування.');
+                } else {
+                    this.voiceOnlyBtn.classList.remove('active');
+                    this.voiceOnlyBtn.title = 'Увімкнути голосовий режим';
+                    this.addMessage('assistant', '💬 Звичайний режим. Можете писати або говорити.');
+                }
+            }
+            
+            updateVoiceOnlyButton() {
+                if (this.ttsEnabled && this.sttEnabled) {
+                    this.voiceOnlyBtn.classList.remove('disabled');
+                    this.voiceOnlyBtn.title = 'Голосовий режим';
+                } else {
+                    this.voiceOnlyBtn.classList.add('disabled');
+                    this.voiceOnlyBtn.classList.remove('active');
+                    this.voiceOnlyMode = false;
+                    this.voiceOnlyBtn.title = 'Потрібно увімкнути TTS і STT';
+                }
+            }
+
+            toggleVoiceOnlyMode() {
+                if (!this.sttEnabled || !this.ttsEnabled) {
+                    this.addMessage('error', 'Для голосового режиму потрібно увімкнути STT та TTS');
+                    return;
+                }
+
+                this.voiceOnlyMode = !this.voiceOnlyMode;
+                
+                if (this.voiceOnlyMode) {
+                    this.startVoiceOnlyMode();
+                } else {
+                    this.stopVoiceOnlyMode();
+                }
+                
+                this.updateChatControls();
+            }
+
+            startVoiceOnlyMode() {
+                console.log('🎤 Starting Voice Only Mode');
+                this.voiceOnlyMode = true;
+                this.isContinuousListening = true;
+                
+                // Save STT state before entering voice-only mode
+                this.sttStateBeforeVoiceMode = this.sttEnabled;
+                
+                // Initialize Voice Activity Detection if not already done
+                if (!this.audioContext) {
+                    this.initVoiceActivation().then(success => {
+                        if (success) {
+                            console.log('🎤 VAD initialized for voice-only mode');
+                            this.startVoiceActivationDetection();
+                        }
+                    });
+                } else {
+                    this.startVoiceActivationDetection();
+                }
+                
+                // Update voice only button
+                this.voiceOnlyBtn.classList.add('active');
+                this.voiceOnlyBtn.innerHTML = '🎤';
+                this.voiceOnlyBtn.title = 'Режим діалогу активний - натисніть для зупинки';
+                
+                this.addMessage('system', '🎤 Голосовий режим активовано. Говоріть природно - система вас слухає.');
+                
+                // Start continuous listening
+                this.startContinuousListening();
+            }
+
+            stopVoiceOnlyMode() {
+                console.log('🎤 Stopping Voice Only Mode');
+                this.voiceOnlyMode = false;
+                this.isContinuousListening = false;
+                this.isCollectingSpeech = false;
+                this.currentTranscript = '';
+                this.speechStartTime = null;
+                
+                // Clear any pending timers
+                if (this.speechCollectionTimer) {
+                    clearTimeout(this.speechCollectionTimer);
+                    this.speechCollectionTimer = null;
+                }
+                
+                // Stop voice activation detection
+                this.stopVoiceActivationDetection();
+                
+                // Stop continuous listening and clear all timers
+                this.stopContinuousListening();
+                this.stopCurrentTTS();
+                
+                // Stop any active recognition and reset listening state
+                if (this.recognition && this.isListening) {
+                    try {
+                        this.recognition.stop();
+                    } catch (error) {
+                        console.log('🎤 Recognition already stopped');
+                    }
+                }
+                this.isListening = false;
+                
+                // Restore STT state to what it was before voice-only mode
+                if (this.sttStateBeforeVoiceMode && !this.sttEnabled) {
+                    console.log('🎤 Restoring STT state after voice-only mode');
+                    this.sttEnabled = true;
+                    this.sttControlBtn.classList.remove('pending');
+                    this.sttControlBtn.classList.add('active');
+                    this.sttControlBtn.title = 'Вимкнути мікрофон';
+                    this.startVoiceActivationDetection();
+                }
+                
+                // Reset voice only button (in header controls)
+                this.voiceOnlyBtn.classList.remove('active');
+                this.voiceOnlyBtn.innerHTML = '🎭';
+                this.voiceOnlyBtn.title = 'Увімкнути голосовий режим';
+                
+                // Update chat controls to show normal input again
+                this.updateChatControls();
+                
+                // Update voice and STT button states after exiting voice mode
+                this.updateVoiceButtonState();
+                
+                this.addMessage('system', '🎤 Голосовий режим вимкнено');
+            }
+
+            updateChatControls() {
+                const sendBtn = document.getElementById('sendBtn');
+                const voiceBtn = document.getElementById('voiceBtn');
+                const chatControls = document.querySelector('.chat-controls');
+                const messageInput = document.getElementById('messageInput');
+                const inputContainer = document.querySelector('.input-container');
+                
+                if (this.voiceOnlyMode) {
+                    // Hide send and voice buttons
+                    if (sendBtn) sendBtn.style.display = 'none';
+                    if (voiceBtn) voiceBtn.style.display = 'none';
+                    
+                    // Hide message input completely
+                    if (messageInput) messageInput.style.display = 'none';
+                    
+                    // Create or show big stop button instead of input
+                    let bigStopBtn = document.getElementById('bigStopVoiceBtn');
+                    if (!bigStopBtn) {
+                        bigStopBtn = document.createElement('button');
+                        bigStopBtn.id = 'bigStopVoiceBtn';
+                        bigStopBtn.className = 'big-stop-voice-btn';
+                        bigStopBtn.innerHTML = 'Вийти з голосового режиму';
+                        bigStopBtn.onclick = () => this.stopVoiceOnlyMode();
+                        inputContainer.appendChild(bigStopBtn);
+                    }
+                    bigStopBtn.style.display = 'block';
+                    
+                    // Create or update single voice control button in controls area
+                    let singleVoiceBtn = document.getElementById('singleVoiceBtn');
+                    if (!singleVoiceBtn) {
+                        singleVoiceBtn = document.createElement('button');
+                        singleVoiceBtn.id = 'singleVoiceBtn';
+                        singleVoiceBtn.className = 'voice-btn listening';
+                        singleVoiceBtn.innerHTML = '🎤';
+                        singleVoiceBtn.title = 'Слухаю...';
+                        chatControls.appendChild(singleVoiceBtn);
+                    }
+                    
+                    // Add stop dialog button in controls
+                    let stopDialogBtn = document.getElementById('stopDialogBtn');
+                    if (!stopDialogBtn) {
+                        stopDialogBtn = document.createElement('button');
+                        stopDialogBtn.id = 'stopDialogBtn';
+                        stopDialogBtn.className = 'stop-dialog-btn';
+                        stopDialogBtn.innerHTML = '❌';
+                        stopDialogBtn.title = 'Вийти з діалогового режиму';
+                        stopDialogBtn.onclick = () => this.stopVoiceOnlyMode();
+                        chatControls.appendChild(stopDialogBtn);
+                    }
+                    
+                    this.updateSingleVoiceButton();
+                    singleVoiceBtn.style.display = 'inline-flex';
+                    stopDialogBtn.style.display = 'inline-flex';
+                    
+                } else {
+                    // Show normal controls
+                    if (sendBtn) sendBtn.style.display = 'inline-flex';
+                    if (voiceBtn) {
+                        voiceBtn.style.display = 'inline-flex';
+                        // Reset voice button to normal microphone state - will be properly updated by updateVoiceButtonState
+                        voiceBtn.classList.remove('listening', 'speaking', 'ready');
+                    }
+                    
+                    // Show message input
+                    if (messageInput) {
+                        messageInput.style.display = 'block';
+                        messageInput.disabled = false;
+                        messageInput.placeholder = 'Введіть повідомлення...';
+                        messageInput.style.opacity = '1';
+                    }
+                    
+                    // Hide big stop button
+                    const bigStopBtn = document.getElementById('bigStopVoiceBtn');
+                    if (bigStopBtn) bigStopBtn.style.display = 'none';
+                    
+                    // Hide small voice controls
+                    const singleVoiceBtn = document.getElementById('singleVoiceBtn');
+                    const stopDialogBtn = document.getElementById('stopDialogBtn');
+                    if (singleVoiceBtn) singleVoiceBtn.style.display = 'none';
+                    if (stopDialogBtn) stopDialogBtn.style.display = 'none';
+                    
+                    // Update button states after showing normal controls
+                    setTimeout(() => {
+                        this.updateVoiceButtonState();
+                    }, 50);
+                }
+            }
+
+            updateSingleVoiceButton() {
+                const button = document.getElementById('singleVoiceBtn');
+                if (!button) return;
+                
+                if (this.isTTSSpeaking) {
+                    button.innerHTML = '⏹️';
+                    button.title = 'Зупинити озвучування';
+                    button.className = 'voice-btn speaking';
+                    button.onclick = () => this.stopCurrentTTS();
+                } else if (this.isContinuousListening) {
+                    button.innerHTML = '🎤';
+                    button.title = 'Слухаю... (використовуйте червону кнопку ❌ для виходу)';
+                    button.className = 'voice-btn listening';
+                    button.onclick = () => {
+                        // In listening mode, clicking the mic should not stop the mode
+                        // Use the X button to stop the mode
+                        this.addMessage('system', 'Для виходу з діалогового режиму натисніть червону кнопку ❌');
+                    };
+                } else {
+                    button.innerHTML = '🎤';
+                    button.title = 'Почати слухати';
+                    button.className = 'voice-btn ready';
+                    button.onclick = () => this.startContinuousListening();
+                }
+            }
+            
+            
+            // Continuous Voice Mode Methods - НОВИЙ МЕХАНІЗМ
+            startContinuousListening() {
+                if (!this.recognition || !this.sttEnabled || this.isTTSSpeaking) {
+                    console.log('🎤 Cannot start continuous listening - STT not available');
+                    return;
+                }
+                
+                console.log('🎤 Starting NEW continuous listening mode');
+                this.isContinuousListening = true;
+                this.currentTranscript = '';
+                this.isCollectingSpeech = false;
+                
+                // Reset speech collection timer
+                if (this.speechCollectionTimer) {
+                    clearTimeout(this.speechCollectionTimer);
+                    this.speechCollectionTimer = null;
+                }
+                
+                this.setupContinuousRecognition();
+                this.startRecognition();
+            }
+            
+            setupContinuousRecognition() {
+                this.recognition.continuous = true;
+                this.recognition.interimResults = true;
+                
+                // Store speech detection variables for TTS interruption
+                this.speechDetectionCount = 0;
+                this.speechDetectionThreshold = this.isTTSSpeaking ? 3 : 1; // Higher threshold during TTS
+                
+                this.recognition.onresult = (event) => {
+                    if (!this.isContinuousListening) return;
+                    
+                    let finalTranscript = '';
+                    let interimTranscript = '';
+                    
+                    // Extract final and interim results
+                    for (let i = event.resultIndex; i < event.results.length; i++) {
+                        const transcript = event.results[i][0].transcript.trim();
+                        if (event.results[i].isFinal) {
+                            finalTranscript += transcript + ' ';
+                        } else {
+                            interimTranscript += transcript;
+                        }
+                    }
+                    
+                    // Handle speech detection with threshold
+                    if (finalTranscript || interimTranscript) {
+                        this.handleSpeechDetected(finalTranscript, interimTranscript);
+                    }
+                };
+                
+                this.recognition.onend = () => {
+                    if (this.isContinuousListening && this.voiceOnlyMode) {
+                        // Reset speech detection count
+                        this.speechDetectionCount = 0;
+                        // Restart recognition automatically
+                        setTimeout(() => {
+                            if (this.isContinuousListening) {
+                                this.startRecognition();
+                            }
+                        }, 100);
+                    }
+                };
+                
+                this.recognition.onerror = (event) => {
+                    console.error('🎤 Recognition error:', event.error);
+                    if (this.isContinuousListening) {
+                        // Reset speech detection count on error
+                        this.speechDetectionCount = 0;
+                        // Retry after error
+                        setTimeout(() => {
+                            if (this.isContinuousListening) {
+                                this.startRecognition();
+                            }
+                        }, 500);
+                    }
+                };
+            }
+            
+            handleSpeechDetected(finalText, interimText) {
+                console.log('🎤 Speech detected - Final:', finalText, 'Interim:', interimText);
+                
+                // In voice-only mode during TTS, apply interruption logic
+                if (this.isTTSSpeaking) {
+                    // Start timing if not already started
+                    if (!this.speechStartTime) {
+                        this.speechStartTime = Date.now();
+                        console.log('🎤 Started recording user speech during TTS (will record from first second)');
+                    }
+                    
+                    const speechDuration = Date.now() - this.speechStartTime;
+                    console.log(`🎤 User speech duration: ${speechDuration}ms (need ${this.minimumInterruptDuration}ms to interrupt)`);
+                    
+                    // Always start collecting speech immediately (from first second)
+                    if (!this.isCollectingSpeech) {
+                        this.isCollectingSpeech = true;
+                        console.log('🎤 Started collecting speech from first second');
+                    }
+                    
+                    // Update accumulated transcript (recording from first second)
+                    if (finalText) {
+                        this.currentTranscript += finalText;
+                    }
+                    
+                    // Show current text in transparent button (accumulated + current interim)
+                    const displayText = this.currentTranscript + interimText;
+                    if (displayText.trim()) {
+                        this.input.value = displayText;
+                        this.input.style.fontStyle = 'italic';
+                        this.input.style.opacity = '0.8';
+                        
+                        // Also show in voice mode exit button if in voice mode
+                        if (this.voiceOnlyMode) {
+                            const bigStopBtn = document.getElementById('bigStopVoiceBtn');
+                            if (bigStopBtn) {
+                                bigStopBtn.innerHTML = displayText.trim() || 'Вийти з голосового режиму';
+                                bigStopBtn.style.fontSize = displayText.trim() ? '14px' : '16px';
+                            }
+                        }
+                    }
+                    
+                    // If speech ended (finalText present), check duration
+                    if (finalText) {
+                        if (speechDuration < this.minimumInterruptDuration) {
+                            // Less than 2 seconds - clear recording but don't interrupt TTS
+                            console.log('🎤 Short speech (<2s) - clearing recording, TTS continues');
+                            this.currentTranscript = '';
+                            this.isCollectingSpeech = false;
+                            this.speechStartTime = null;
+                            this.input.value = '';
+                            this.input.style.fontStyle = 'normal';
+                            this.input.style.opacity = '1';
+                            
+                            // Clear any pending timer
+                            if (this.speechCollectionTimer) {
+                                clearTimeout(this.speechCollectionTimer);
+                                this.speechCollectionTimer = null;
+                            }
+                            
+                            // Reset voice mode button text if in voice mode
+                            if (this.voiceOnlyMode) {
+                                const bigStopBtn = document.getElementById('bigStopVoiceBtn');
+                                if (bigStopBtn) {
+                                    bigStopBtn.innerHTML = 'Вийти з голосового режиму';
+                                    bigStopBtn.style.fontSize = '16px';
+                                }
+                            }
+                            return;
+                        } else {
+                            // 2+ seconds - interrupt TTS and process speech
+                            console.log('🎤 Long speech (2+ seconds) - interrupting TTS and processing');
+                            this.stopCurrentTTS();
+                            this.speechStartTime = null;
+                            // Continue to normal processing below
+                        }
+                    }
+                    
+                    // If still speaking during TTS, don't set timer yet
+                    return;
+                }
+                
+                // Normal mode (no TTS) - start collecting speech if not already
+                if (!this.isCollectingSpeech) {
+                    this.isCollectingSpeech = true;
+                    console.log('🎤 Started collecting speech (normal mode)');
+                }
+                
+                // Update accumulated transcript
+                if (finalText) {
+                    this.currentTranscript += finalText;
+                }
+                
+                // Show current text in transparent button (accumulated + current interim)
+                const displayText = this.currentTranscript + interimText;
+                if (displayText.trim()) {
+                    this.input.value = displayText;
+                    this.input.style.fontStyle = 'italic';
+                    this.input.style.opacity = '0.8';
+                    
+                    // Also show in voice mode exit button if in voice mode
+                    if (this.voiceOnlyMode) {
+                        const bigStopBtn = document.getElementById('bigStopVoiceBtn');
+                        if (bigStopBtn) {
+                            bigStopBtn.innerHTML = displayText.trim() || 'Вийти з голосового режиму';
+                            bigStopBtn.style.fontSize = displayText.trim() ? '14px' : '16px';
+                        }
+                    }
+                }
+                
+                // Reset timer for speech collection
+                this.resetSpeechTimer();
+            }
+            
+            resetSpeechTimer() {
+                // Clear existing timer
+                if (this.speechCollectionTimer) {
+                    clearTimeout(this.speechCollectionTimer);
+                }
+                
+                // Set shorter timer for voice-only mode, longer for mixed mode
+                const timerDuration = this.voiceOnlyMode ? 2000 : 3000; // 2s for voice-only, 3s for mixed
+                this.speechCollectionTimer = setTimeout(() => {
+                    this.processSpeechCollection();
+                }, timerDuration);
+                
+                console.log(`🎤 Speech timer reset - ${timerDuration/1000}s to send (voice-only: ${this.voiceOnlyMode})`);
+            }
+            
+            processSpeechCollection() {
+                if (!this.currentTranscript.trim()) {
+                    console.log('🎤 No speech to process');
+                    this.isCollectingSpeech = false;
+                    this.speechStartTime = null;
+                    return;
+                }
+                
+                console.log('🎤 Processing collected speech:', this.currentTranscript);
+                
+                // Clear input styling and set final text
+                this.input.style.fontStyle = 'normal';
+                this.input.style.opacity = '1';
+                this.input.value = this.currentTranscript.trim();
+                
+                // Send the message
+                this.sendMessage();
+                
+                // Reset for next collection
+                this.currentTranscript = '';
+                this.isCollectingSpeech = false;
+                this.speechStartTime = null;
+                this.input.value = '';
+                
+                // Reset voice mode button text if in voice mode
+                if (this.voiceOnlyMode) {
+                    const bigStopBtn = document.getElementById('bigStopVoiceBtn');
+                    if (bigStopBtn) {
+                        bigStopBtn.innerHTML = 'Вийти з голосового режиму';
+                        bigStopBtn.style.fontSize = '16px';
+                    }
+                }
+                
+                // Clear timer
+                if (this.speechCollectionTimer) {
+                    clearTimeout(this.speechCollectionTimer);
+                    this.speechCollectionTimer = null;
+                }
+            }
+            
+            startRecognition() {
+                try {
+                    this.recognition.start();
+                    this.updateSingleVoiceButton();
+                } catch (error) {
+                    if (error.name === 'InvalidStateError') {
+                        // Recognition already started, ignore
+                        console.log('🎤 Recognition already active');
+                    } else {
+                        console.error('🎤 Error starting recognition:', error);
+                    }
+                }
+            }
+            
+            stopContinuousListening() {
+                console.log('🎤 Stopping NEW continuous listening mode');
+                this.isContinuousListening = false;
+                this.isCollectingSpeech = false;
+                
+                // Clear timers
+                if (this.speechCollectionTimer) {
+                    clearTimeout(this.speechCollectionTimer);
+                    this.speechCollectionTimer = null;
+                }
+                
+                // Reset speech timing
+                this.speechStartTime = null;
+                
+                // Stop recognition
+                try {
+                    this.recognition.stop();
+                } catch (error) {
+                    console.log('🎤 Recognition already stopped');
+                }
+                
+                // Reset text
+                this.currentTranscript = '';
+                this.input.value = '';
+                this.input.style.fontStyle = 'normal';
+                this.input.style.opacity = '1';
+                
+                this.updateSingleVoiceButton();
+            }
+            
+            // Override old methods with new logic
+            stopCurrentTTS() {
+                if (this.synthesis) {
+                    this.synthesis.cancel();
+                    console.log('🔊 TTS stopped by user');
+                }
+                this.isTTSSpeaking = false;
+                
+                // Reset speech timing when stopping TTS
+                this.speechStartTime = null;
+                
+                // Resume microphone if it was paused for TTS
+                
+                // In voice mode, microphone continues listening automatically
+                // No need to restart - the continuous mechanism handles this
+                if (this.voiceOnlyMode) {
+                    this.enableInputAfterTTS();
+                    this.updateSingleVoiceButton();
+                    console.log('🎤 Microphone continues listening after TTS stop');
+                }
+            }
+            
+            disableInputDuringTTS() {
+                const messageInput = document.getElementById('messageInput');
+                const sendBtn = document.getElementById('sendBtn');
+                const voiceBtn = document.getElementById('voiceBtn');
+                
+                // Disable visual input controls during TTS in voice mode
+                if (messageInput) {
+                    messageInput.disabled = true;
+                    messageInput.style.opacity = '0.3';
+                    messageInput.placeholder = 'Система говорить... (говоріть для переривання)';
+                }
+                
+                if (sendBtn) sendBtn.disabled = true;
+                if (voiceBtn) voiceBtn.disabled = true;
+            }
+            
+            enableInputAfterTTS() {
+                const messageInput = document.getElementById('messageInput');
+                const sendBtn = document.getElementById('sendBtn');
+                const voiceBtn = document.getElementById('voiceBtn');
+                
+                if (this.voiceOnlyMode) {
+                    // In voice mode, keep input disabled but change placeholder
+                    if (messageInput) {
+                        messageInput.disabled = true;
+                        messageInput.style.opacity = '0.5';
+                        messageInput.placeholder = 'Голосовий режим - говоріть в мікрофон (червона ❌ для виходу)';
+                    }
+                } else {
+                    // In normal mode, enable all controls
+                    if (messageInput) {
+                        messageInput.disabled = false;
+                        messageInput.style.opacity = '1';
+                        messageInput.placeholder = 'Введіть повідомлення...';
+                    }
+                    
+                    if (sendBtn) sendBtn.disabled = false;
+                    if (voiceBtn) voiceBtn.disabled = false;
+                }
+            }
+
+            showModelInfoTemporary() {
+                // Show model info for 3 seconds when model is changed
+                this.modelInfo.style.display = 'block';
+                this.modelInfo.style.opacity = '1';
+                
+                // Clear any existing timeout
+                if (this.modelInfoTimeout) {
+                    clearTimeout(this.modelInfoTimeout);
+                }
+                
+                // Hide after 3 seconds
+                this.modelInfoTimeout = setTimeout(() => {
+                    this.modelInfo.style.opacity = '0';
+                    setTimeout(() => {
+                        this.modelInfo.style.display = 'none';
+                    }, 300); // Wait for opacity transition
+                }, 3000);
+            }
+            
+            updateModelInfo() {
+                const selectedModel = this.modelSelect.value;
+                const description = this.modelDescriptions[selectedModel] || 'Опис недоступний';
+                this.modelDescription.textContent = description;
+            }
+            
+            updateConnectionStatus(status) {
+                this.connectionStatus = status;
+                this.atlasTitle.className = `${status}`;
+                
+                switch(status) {
+                    case 'connected':
+                        this.atlasTitle.title = 'ATLAS - З\'єднання активне';
+                        break;
+                    case 'connecting':
+                        this.atlasTitle.title = 'ATLAS - Підключення...';
+                        break;
+                    case 'disconnected':
+                        this.atlasTitle.title = 'ATLAS - Немає з\'єднання';
+                        break;
+                }
+                console.log(`📡 Connection status: ${status}`);
+            }
+            
+            checkConnectionStatus() {
+                // Check server health
+                fetch('/health')
+                    .then(response => {
+                        if (response.ok) {
+                            this.updateConnectionStatus('connected');
+                        } else {
+                            this.updateConnectionStatus('connecting');
+                        }
+                    })
+                    .catch(() => {
+                        this.updateConnectionStatus('disconnected');
+                    });
+            }
+            
+            async sendMessage() {
+                const message = this.input.value.trim();
+                if (!message || this.isLoading) return;
+                
+                this.addMessage('user', message);
+                this.input.value = '';
+                this.input.classList.remove('has-text');
+                this.setLoading(true);
+                
+                // Set connecting status during request
+                this.updateConnectionStatus('connecting');
+                
+                try {
+                    const response = await fetch('/v1/chat/completions', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify({
+                            model: this.modelSelect.value,
+                            messages: [
+                                { role: 'system', content: 'Ви корисний асистент. Відповідайте коротко та по суті.' },
+                                { role: 'user', content: message }
+                            ],
+                            stream: false
+                        })
+                    });
+                    
+                    const data = await response.json();
+                    
+                    if (!response.ok) {
+                        throw new Error(data?.error?.message || 'Помилка запиту');
+                    }
+                    
+                    const reply = data?.choices?.[0]?.message?.content || 'Вибачте, не вдалося отримати відповідь';
+                    this.addMessage('assistant', reply);
+                    
+                    // Set connected status on successful response
+                    this.updateConnectionStatus('connected');
+                    
+                    // Auto-speak only in voice mode or if TTS is enabled
+                    const shouldSpeak = this.voiceOnlyMode || this.ttsEnabled;
+                    if (shouldSpeak) {
+                        this.speak(reply);
+                    }
+                    
+                } catch (error) {
+                    console.error('Error:', error);
+                    this.addMessage('error', `Помилка: ${error.message}`);
+                    // Set disconnected status on error
+                    this.updateConnectionStatus('disconnected');
+                } finally {
+                    this.setLoading(false);
+                }
+            }
+            
+            addMessage(role, content) {
+                const messageEl = document.createElement('div');
+                messageEl.className = `message ${role}`;
+                messageEl.textContent = content;
+                
+                this.chat.appendChild(messageEl);
+                this.chat.scrollTop = this.chat.scrollHeight;
+                
+                this.messages.push({ role, content });
+            }
+            
+            // Voice Activity Detection Methods
+            async initVoiceActivation() {
+                try {
+                    // Get microphone access for voice activation
+                    const stream = await navigator.mediaDevices.getUserMedia({ 
+                        audio: {
+                            echoCancellation: true,
+                            noiseSuppression: true,
+                            autoGainControl: true
+                        } 
+                    });
+                    
+                    // Create audio context and analyser
+                    this.audioContext = new (window.AudioContext || window.webkitAudioContext)();
+                    this.analyser = this.audioContext.createAnalyser();
+                    this.microphone = this.audioContext.createMediaStreamSource(stream);
+                    
+                    // Configure analyser
+                    this.analyser.fftSize = 512;
+                    this.microphone.connect(this.analyser);
+                    
+                    console.log('🎤 Voice activation initialized');
+                    return true;
+                } catch (error) {
+                    console.error('🎤 Voice activation setup failed:', error);
+                    return false;
+                }
+            }
+            
+            startVoiceActivationDetection() {
+                if (!this.analyser || this.vadCheckInterval) {
+                    return;
+                }
+                
+                console.log('🎤 Starting voice activation detection');
+                
+                this.vadCheckInterval = setInterval(() => {
+                    this.checkVoiceActivity();
+                }, 100); // Check every 100ms
+            }
+            
+            stopVoiceActivationDetection() {
+                if (this.vadCheckInterval) {
+                    clearInterval(this.vadCheckInterval);
+                    this.vadCheckInterval = null;
+                    console.log('🎤 Stopped voice activation detection');
+                }
+            }
+            
+            checkVoiceActivity() {
+                if (!this.analyser) return;
+                
+                const dataArray = new Uint8Array(this.analyser.frequencyBinCount);
+                this.analyser.getByteFrequencyData(dataArray);
+                
+                // Calculate average volume
+                let sum = 0;
+                for (let i = 0; i < dataArray.length; i++) {
+                    sum += dataArray[i];
+                }
+                const average = sum / dataArray.length;
+                
+                // Update volume indicator
+                this.updateVolumeIndicator(average);
+                
+                // Check if voice is detected
+                const wasActivated = this.voiceActivated;
+                this.voiceActivated = average > this.volumeThreshold;
+                
+                // Log voice activation changes
+                if (this.voiceActivated && !wasActivated) {
+                    console.log(`🎤 Voice activated! Volume: ${average.toFixed(1)} (threshold: ${this.volumeThreshold})`);
+                    this.onVoiceActivated();
+                } else if (!this.voiceActivated && wasActivated) {
+                    console.log(`🎤 Voice deactivated. Volume: ${average.toFixed(1)}`);
+                    this.onVoiceDeactivated();
+                }
+            }
+            
+            updateVolumeIndicator(volume) {
+                if (!this.volumeIndicator) return;
+                
+                // Show indicator only when lower voice button is active and volume is significant
+                if (this.isListening && volume > 5) {
+                    this.volumeIndicator.classList.add('active');
+                    
+                    // Change color based on volume level
+                    const intensity = Math.min(volume / 100, 1); // Normalize to 0-1
+                    if (volume > this.volumeThreshold) {
+                        // Voice detected - green
+                        this.volumeIndicator.style.borderColor = '#00ff88';
+                        this.volumeIndicator.style.color = '#00ff88';
+                        this.volumeIndicator.style.backgroundColor = `rgba(0, 255, 136, ${0.2 + intensity * 0.3})`;
+                    } else {
+                        // Below threshold - yellow
+                        this.volumeIndicator.style.borderColor = '#ffaa00';
+                        this.volumeIndicator.style.color = '#ffaa00';
+                        this.volumeIndicator.style.backgroundColor = `rgba(255, 170, 0, ${0.1 + intensity * 0.2})`;
+                    }
+                    
+                    // Auto-hide after 1 second of low volume
+                    clearTimeout(this.volumeHideTimer);
+                    this.volumeHideTimer = setTimeout(() => {
+                        if (this.volumeIndicator) {
+                            this.volumeIndicator.classList.remove('active');
+                        }
+                    }, 1000);
+                }
+            }
+            
+            onVoiceActivated() {
+                // Voice was detected - but activation only works when lower mic button is pressed
+                // The actual recognition is triggered by the lower mic button press, not VAD
+                console.log('🎤 Voice detected via VAD (but needs lower mic button press to activate)');
+            }
+            
+            onVoiceDeactivated() {
+                // Voice stopped - could be used for additional logic if needed
+                // For now, let the existing 5-second timer handle speech collection
+            }
+            
+            adjustVADSensitivity() {
+                // Cycle through sensitivity levels: 20 (high) -> 30 (medium) -> 50 (low) -> 20...
+                const levels = [20, 30, 50];
+                const currentIndex = levels.indexOf(this.volumeThreshold);
+                const nextIndex = (currentIndex + 1) % levels.length;
+                
+                this.volumeThreshold = levels[nextIndex];
+                
+                // Update ATLAS title with sensitivity info
+                const sensitivity = this.volumeThreshold === 20 ? 'В' : 
+                                   this.volumeThreshold === 30 ? 'С' : 'Н';
+                
+                this.atlasTitle.title = `ATLAS - Чутливість: ${sensitivity === 'В' ? 'Висока' : sensitivity === 'С' ? 'Середня' : 'Низька'} (${this.volumeThreshold})`;
+                
+                console.log(`🎤 VAD sensitivity adjusted via ATLAS click: ${sensitivity} (${this.volumeThreshold})`);
+                this.addMessage('system', `🎚️ Чутливість мікрофона: ${sensitivity === 'В' ? 'Висока' : sensitivity === 'С' ? 'Середня' : 'Низька'}`);
+            }
+            
+            // Microphone control methods for TTS self-listening prevention
+            // TTS microphone handling methods removed - now using filter-based approach
+            // Microphone stays active during TTS to allow interruption detection
+            // Self-listening is prevented by checking isTTSSpeaking flag in speech recognition
+            
+            setLoading(loading) {
+                this.isLoading = loading;
+                this.sendBtn.disabled = loading;
+                this.sendBtn.textContent = loading ? '⏳' : '📤';
+                
+                if (loading) {
+                    const loadingEl = document.createElement('div');
+                    loadingEl.className = 'loading';
+                    loadingEl.textContent = '⏳ Думаю...';
+                    loadingEl.id = 'loading';
+                    this.chat.appendChild(loadingEl);
+                } else {
+                    const loadingEl = document.getElementById('loading');
+                    if (loadingEl) loadingEl.remove();
+                }
+                
+                this.chat.scrollTop = this.chat.scrollHeight;
+            }
+        }
+        
+        // Initialize app when DOM is ready
+        document.addEventListener('DOMContentLoaded', () => {
+            console.log('🚀 Простий чат запущений');
+            new SimpleChat();
+        });
+    </script>
+</body>
+</html>

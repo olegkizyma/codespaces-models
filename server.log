@@ -1,25 +1,813 @@
-nohup: ignoring input
-node:events:502
-      throw er; // Unhandled 'error' event
-      ^
-
-Error: listen EADDRINUSE: address already in use :::3010
-    at Server.setupListenHandle [as _listen2] (node:net:1908:16)
-    at listenInCluster (node:net:1965:12)
-    at Server.listen (node:net:2067:7)
-    at Function.listen (/workspaces/codespaces-models/node_modules/express/lib/application.js:635:24)
-    at file:///workspaces/codespaces-models/server.js:129:5
-    at ModuleJob.run (node:internal/modules/esm/module_job:263:25)
-    at async ModuleLoader.import (node:internal/modules/esm/loader:540:24)
-    at async asyncRunEntryPointWithESMLoader (node:internal/modules/run_main:117:5)
-Emitted 'error' event on Server instance at:
-    at emitErrorNT (node:net:1944:8)
-    at process.processTicksAndRejections (node:internal/process/task_queues:82:21) {
-  code: 'EADDRINUSE',
-  errno: -98,
-  syscall: 'listen',
-  address: '::',
-  port: 3010
+OpenAI proxy listening on 3010
+[OPENAI-STD] Chat completions request for model: "gpt-4o-mini"
+[OPENAI-STD] Chat completions request for model: "gpt-4o-mini"
+[OPENAI-STD] Chat completions request for model: "gpt-4o-mini"
+OpenAI proxy listening on 3010
+OpenAI proxy listening on 3010
+OpenAI proxy listening on 3010
+OpenAI proxy listening on 3010
+OpenAI proxy listening on 3010
+📱 Mobile detected, serving simple version
+[OPENAI-STD] Chat completions request for model: "gpt-4o-mini"
+📱 Mobile detected, serving simple version
+OpenAI proxy listening on 3010
+📱 Mobile detected, serving simple version
+[OPENAI-STD] Chat completions request for model: "Meta-Llama-3.1-8B-Instruct"
+📱 Mobile detected, serving simple version
+📱 Mobile detected, serving simple version
+OpenAI proxy listening on 3010
+📱 Mobile detected, serving simple version
+📱 Mobile detected, serving simple version
+📱 Mobile detected, serving simple version
+📱 Mobile detected, serving simple version
+📱 Mobile detected, serving simple version
+OpenAI proxy listening on 3010
+[OPENAI-STD] Chat completions request for model: "gpt-4o-mini"
+[OPENAI-STD] Chat completions request for model: "gpt-4o-mini"
+OpenAI proxy listening on 3010
+[OPENAI-STD] Chat completions request for model: "gpt-4o-mini"
+📱 Mobile detected, serving simple version
+📱 Mobile detected, serving simple version
+📱 Mobile detected, serving simple version
+[OPENAI-STD] Chat completions request for model: "gpt-4o-mini"
+OpenAI proxy listening on 3010
+[OPENAI-STD] Chat completions request for model: "gpt-4o-mini"
+📱 Serving simple chat interface
+ReferenceError: __dirname is not defined
+    at file:///Users/dev/Documents/NIMDA/codespaces-models/server.js:21:26
+    at Layer.handle [as handle_request] (/Users/dev/Documents/NIMDA/codespaces-models/node_modules/express/lib/router/layer.js:95:5)
+    at next (/Users/dev/Documents/NIMDA/codespaces-models/node_modules/express/lib/router/route.js:149:13)
+    at Route.dispatch (/Users/dev/Documents/NIMDA/codespaces-models/node_modules/express/lib/router/route.js:119:3)
+    at Layer.handle [as handle_request] (/Users/dev/Documents/NIMDA/codespaces-models/node_modules/express/lib/router/layer.js:95:5)
+    at /Users/dev/Documents/NIMDA/codespaces-models/node_modules/express/lib/router/index.js:284:15
+    at router.process_params (/Users/dev/Documents/NIMDA/codespaces-models/node_modules/express/lib/router/index.js:346:12)
+    at next (/Users/dev/Documents/NIMDA/codespaces-models/node_modules/express/lib/router/index.js:280:10)
+    at jsonParser (/Users/dev/Documents/NIMDA/codespaces-models/node_modules/body-parser/lib/types/json.js:113:7)
+    at Layer.handle [as handle_request] (/Users/dev/Documents/NIMDA/codespaces-models/node_modules/express/lib/router/layer.js:95:5)
+📱 Serving simple chat interface
+ReferenceError: __dirname is not defined
+    at file:///Users/dev/Documents/NIMDA/codespaces-models/server.js:21:26
+    at Layer.handle [as handle_request] (/Users/dev/Documents/NIMDA/codespaces-models/node_modules/express/lib/router/layer.js:95:5)
+    at next (/Users/dev/Documents/NIMDA/codespaces-models/node_modules/express/lib/router/route.js:149:13)
+    at Route.dispatch (/Users/dev/Documents/NIMDA/codespaces-models/node_modules/express/lib/router/route.js:119:3)
+    at Layer.handle [as handle_request] (/Users/dev/Documents/NIMDA/codespaces-models/node_modules/express/lib/router/layer.js:95:5)
+    at /Users/dev/Documents/NIMDA/codespaces-models/node_modules/express/lib/router/index.js:284:15
+    at router.process_params (/Users/dev/Documents/NIMDA/codespaces-models/node_modules/express/lib/router/index.js:346:12)
+    at next (/Users/dev/Documents/NIMDA/codespaces-models/node_modules/express/lib/router/index.js:280:10)
+    at jsonParser (/Users/dev/Documents/NIMDA/codespaces-models/node_modules/body-parser/lib/types/json.js:113:7)
+    at Layer.handle [as handle_request] (/Users/dev/Documents/NIMDA/codespaces-models/node_modules/express/lib/router/layer.js:95:5)
+📱 Serving simple chat interface
+ReferenceError: __dirname is not defined
+    at file:///Users/dev/Documents/NIMDA/codespaces-models/server.js:21:26
+    at Layer.handle [as handle_request] (/Users/dev/Documents/NIMDA/codespaces-models/node_modules/express/lib/router/layer.js:95:5)
+    at next (/Users/dev/Documents/NIMDA/codespaces-models/node_modules/express/lib/router/route.js:149:13)
+    at Route.dispatch (/Users/dev/Documents/NIMDA/codespaces-models/node_modules/express/lib/router/route.js:119:3)
+    at Layer.handle [as handle_request] (/Users/dev/Documents/NIMDA/codespaces-models/node_modules/express/lib/router/layer.js:95:5)
+    at /Users/dev/Documents/NIMDA/codespaces-models/node_modules/express/lib/router/index.js:284:15
+    at router.process_params (/Users/dev/Documents/NIMDA/codespaces-models/node_modules/express/lib/router/index.js:346:12)
+    at next (/Users/dev/Documents/NIMDA/codespaces-models/node_modules/express/lib/router/index.js:280:10)
+    at jsonParser (/Users/dev/Documents/NIMDA/codespaces-models/node_modules/body-parser/lib/types/json.js:113:7)
+    at Layer.handle [as handle_request] (/Users/dev/Documents/NIMDA/codespaces-models/node_modules/express/lib/router/layer.js:95:5)
+📱 Serving simple chat interface
+ReferenceError: __dirname is not defined
+    at file:///Users/dev/Documents/NIMDA/codespaces-models/server.js:21:26
+    at Layer.handle [as handle_request] (/Users/dev/Documents/NIMDA/codespaces-models/node_modules/express/lib/router/layer.js:95:5)
+    at next (/Users/dev/Documents/NIMDA/codespaces-models/node_modules/express/lib/router/route.js:149:13)
+    at Route.dispatch (/Users/dev/Documents/NIMDA/codespaces-models/node_modules/express/lib/router/route.js:119:3)
+    at Layer.handle [as handle_request] (/Users/dev/Documents/NIMDA/codespaces-models/node_modules/express/lib/router/layer.js:95:5)
+    at /Users/dev/Documents/NIMDA/codespaces-models/node_modules/express/lib/router/index.js:284:15
+    at router.process_params (/Users/dev/Documents/NIMDA/codespaces-models/node_modules/express/lib/router/index.js:346:12)
+    at next (/Users/dev/Documents/NIMDA/codespaces-models/node_modules/express/lib/router/index.js:280:10)
+    at jsonParser (/Users/dev/Documents/NIMDA/codespaces-models/node_modules/body-parser/lib/types/json.js:113:7)
+    at Layer.handle [as handle_request] (/Users/dev/Documents/NIMDA/codespaces-models/node_modules/express/lib/router/layer.js:95:5)
+📱 Serving simple chat interface
+ReferenceError: __dirname is not defined
+    at file:///Users/dev/Documents/NIMDA/codespaces-models/server.js:21:26
+    at Layer.handle [as handle_request] (/Users/dev/Documents/NIMDA/codespaces-models/node_modules/express/lib/router/layer.js:95:5)
+    at next (/Users/dev/Documents/NIMDA/codespaces-models/node_modules/express/lib/router/route.js:149:13)
+    at Route.dispatch (/Users/dev/Documents/NIMDA/codespaces-models/node_modules/express/lib/router/route.js:119:3)
+    at Layer.handle [as handle_request] (/Users/dev/Documents/NIMDA/codespaces-models/node_modules/express/lib/router/layer.js:95:5)
+    at /Users/dev/Documents/NIMDA/codespaces-models/node_modules/express/lib/router/index.js:284:15
+    at router.process_params (/Users/dev/Documents/NIMDA/codespaces-models/node_modules/express/lib/router/index.js:346:12)
+    at next (/Users/dev/Documents/NIMDA/codespaces-models/node_modules/express/lib/router/index.js:280:10)
+    at jsonParser (/Users/dev/Documents/NIMDA/codespaces-models/node_modules/body-parser/lib/types/json.js:113:7)
+    at Layer.handle [as handle_request] (/Users/dev/Documents/NIMDA/codespaces-models/node_modules/express/lib/router/layer.js:95:5)
+OpenAI proxy listening on 3010
+📱 Serving simple chat interface
+[OPENAI-STD] Chat completions request for model: "gpt-4o-mini"
+📱 Serving simple chat interface
+[OPENAI-STD] Chat completions request for model: "microsoft/Phi-3.5-vision-instruct"
+[OPENAI-STD] Chat completions request for model: "microsoft/Phi-3.5-vision-instruct"
+📱 Serving simple chat interface
+[OPENAI-STD] Chat completions request for model: "gpt-4o-mini"
+📱 Serving simple chat interface
+📱 Serving simple chat interface
+[OPENAI-STD] Chat completions request for model: "openai/gpt-4o-mini"
+OpenAI proxy listening on 3010
+📱 Serving simple chat interface
+[OPENAI-STD] Chat completions request for model: "Phi-3.5-mini-instruct"
+[OPENAI-STD] Chat completions request for model: "Meta-Llama-3.1-8B-Instruct"
+📱 Serving simple chat interface
+📱 Serving simple chat interface
+📱 Serving simple chat interface
+📱 Serving simple chat interface
+[OPENAI-STD] Chat completions request for model: "openai/gpt-4o-mini"
+📱 Serving simple chat interface
+📱 Serving simple chat interface
+📱 Serving simple chat interface
+📱 Serving simple chat interface
+📱 Serving simple chat interface
+OpenAI proxy listening on 3010
+📱 Serving simple chat interface
+[OPENAI-STD] Chat completions request for model: "o1-preview"
+OpenAI standard API error PermissionDeniedError: 403 status code (no body)
+    at APIError.generate (file:///Users/dev/Documents/NIMDA/codespaces-models/node_modules/openai/error.mjs:47:20)
+    at OpenAI.makeStatusError (file:///Users/dev/Documents/NIMDA/codespaces-models/node_modules/openai/core.mjs:268:25)
+    at OpenAI.makeRequest (file:///Users/dev/Documents/NIMDA/codespaces-models/node_modules/openai/core.mjs:311:30)
+    at process.processTicksAndRejections (node:internal/process/task_queues:105:5)
+    at async file:///Users/dev/Documents/NIMDA/codespaces-models/server.js:258:22 {
+  status: 403,
+  headers: {
+    'content-length': '0',
+    date: 'Tue, 02 Sep 2025 20:24:33 GMT',
+    server: 'github.com',
+    vary: 'Origin',
+    'x-github-backend': 'Kubernetes',
+    'x-github-request-id': 'EAF1:167D3:155F204:188D073:68B75281'
+  },
+  request_id: undefined,
+  error: undefined,
+  code: undefined,
+  param: undefined,
+  type: undefined
 }
-
-Node.js v20.19.4
+[OPENAI-STD] Chat completions request for model: "o1-mini"
+OpenAI standard API error PermissionDeniedError: 403 status code (no body)
+    at APIError.generate (file:///Users/dev/Documents/NIMDA/codespaces-models/node_modules/openai/error.mjs:47:20)
+    at OpenAI.makeStatusError (file:///Users/dev/Documents/NIMDA/codespaces-models/node_modules/openai/core.mjs:268:25)
+    at OpenAI.makeRequest (file:///Users/dev/Documents/NIMDA/codespaces-models/node_modules/openai/core.mjs:311:30)
+    at process.processTicksAndRejections (node:internal/process/task_queues:105:5)
+    at async file:///Users/dev/Documents/NIMDA/codespaces-models/server.js:258:22 {
+  status: 403,
+  headers: {
+    'content-length': '0',
+    date: 'Tue, 02 Sep 2025 20:24:40 GMT',
+    server: 'github.com',
+    vary: 'Origin',
+    'x-github-backend': 'Kubernetes',
+    'x-github-request-id': 'EAF7:14B0BC:1565BBC:189311B:68B75288'
+  },
+  request_id: undefined,
+  error: undefined,
+  code: undefined,
+  param: undefined,
+  type: undefined
+}
+[OPENAI-STD] Chat completions request for model: "openai/o1-preview"
+OpenAI standard API error PermissionDeniedError: 403 status code (no body)
+    at APIError.generate (file:///Users/dev/Documents/NIMDA/codespaces-models/node_modules/openai/error.mjs:47:20)
+    at OpenAI.makeStatusError (file:///Users/dev/Documents/NIMDA/codespaces-models/node_modules/openai/core.mjs:268:25)
+    at OpenAI.makeRequest (file:///Users/dev/Documents/NIMDA/codespaces-models/node_modules/openai/core.mjs:311:30)
+    at process.processTicksAndRejections (node:internal/process/task_queues:105:5)
+    at async file:///Users/dev/Documents/NIMDA/codespaces-models/server.js:258:22 {
+  status: 403,
+  headers: {
+    'content-length': '0',
+    date: 'Tue, 02 Sep 2025 20:24:46 GMT',
+    server: 'github.com',
+    vary: 'Origin',
+    'x-github-backend': 'Kubernetes',
+    'x-github-request-id': 'EAFB:263BE:155A974:18873FF:68B7528E'
+  },
+  request_id: undefined,
+  error: undefined,
+  code: undefined,
+  param: undefined,
+  type: undefined
+}
+[OPENAI-STD] Chat completions request for model: "gpt-3.5-turbo"
+OpenAI standard API error NotFoundError: 404 Unknown model: /gpt-3.5-turbo
+    at APIError.generate (file:///Users/dev/Documents/NIMDA/codespaces-models/node_modules/openai/error.mjs:50:20)
+    at OpenAI.makeStatusError (file:///Users/dev/Documents/NIMDA/codespaces-models/node_modules/openai/core.mjs:268:25)
+    at OpenAI.makeRequest (file:///Users/dev/Documents/NIMDA/codespaces-models/node_modules/openai/core.mjs:311:30)
+    at process.processTicksAndRejections (node:internal/process/task_queues:105:5)
+    at async file:///Users/dev/Documents/NIMDA/codespaces-models/server.js:258:22 {
+  status: 404,
+  headers: {
+    'content-length': '119',
+    'content-type': 'text/plain; charset=utf-8',
+    date: 'Tue, 02 Sep 2025 20:24:53 GMT',
+    server: 'github.com',
+    vary: 'Origin',
+    'x-content-type-options': 'nosniff',
+    'x-github-backend': 'Kubernetes',
+    'x-github-request-id': 'EB00:994B0:162372B:1951553:68B75294'
+  },
+  request_id: undefined,
+  error: {
+    code: 'unknown_model',
+    message: 'Unknown model: /gpt-3.5-turbo',
+    details: 'Unknown model: /gpt-3.5-turbo'
+  },
+  code: 'unknown_model',
+  param: undefined,
+  type: undefined
+}
+[OPENAI-STD] Chat completions request for model: "openai/gpt-3.5-turbo"
+OpenAI standard API error NotFoundError: 404 Unknown model: openai/gpt-3.5-turbo
+    at APIError.generate (file:///Users/dev/Documents/NIMDA/codespaces-models/node_modules/openai/error.mjs:50:20)
+    at OpenAI.makeStatusError (file:///Users/dev/Documents/NIMDA/codespaces-models/node_modules/openai/core.mjs:268:25)
+    at OpenAI.makeRequest (file:///Users/dev/Documents/NIMDA/codespaces-models/node_modules/openai/core.mjs:311:30)
+    at process.processTicksAndRejections (node:internal/process/task_queues:105:5)
+    at async file:///Users/dev/Documents/NIMDA/codespaces-models/server.js:258:22 {
+  status: 404,
+  headers: {
+    'content-length': '131',
+    'content-type': 'text/plain; charset=utf-8',
+    date: 'Tue, 02 Sep 2025 20:25:00 GMT',
+    server: 'github.com',
+    vary: 'Origin',
+    'x-content-type-options': 'nosniff',
+    'x-github-backend': 'Kubernetes',
+    'x-github-request-id': 'EB07:3ACA6B:14DE169:180E7B6:68B7529B'
+  },
+  request_id: undefined,
+  error: {
+    code: 'unknown_model',
+    message: 'Unknown model: openai/gpt-3.5-turbo',
+    details: 'Unknown model: openai/gpt-3.5-turbo'
+  },
+  code: 'unknown_model',
+  param: undefined,
+  type: undefined
+}
+[OPENAI-STD] Chat completions request for model: "Phi-3-medium-128k-instruct"
+[OPENAI-STD] Chat completions request for model: "Phi-3.5-mini-instruct"
+[OPENAI-STD] Chat completions request for model: "Phi-3.5-mini-instruct"
+[OPENAI-STD] Chat completions request for model: "microsoft/Phi-3-medium-128k-instruct"
+OpenAI proxy listening on 3010
+[OPENAI-STD] Chat completions request for model: "Phi-3-medium-128k-instruct"
+📱 Serving simple chat interface
+📱 Serving simple chat interface
+[OPENAI-STD] Chat completions request for model: "openai/gpt-4o-mini"
+[OPENAI-STD] Chat completions request for model: "openai/gpt-4o-mini"
+📱 Serving simple chat interface
+📱 Serving simple chat interface
+📱 Serving simple chat interface
+[OPENAI-STD] Chat completions request for model: "Mistral-Nemo"
+[OPENAI-STD] Chat completions request for model: "Mistral-Nemo"
+[OPENAI-STD] Chat completions request for model: "gpt-4o"
+[OPENAI-STD] Chat completions request for model: "gpt-4o"
+OpenAI proxy listening on 3010
+📱 Serving simple chat interface
+📱 Serving simple chat interface
+📱 Serving simple chat interface
+📱 Serving simple chat interface
+OpenAI proxy listening on 3010
+📱 Serving simple chat interface
+📱 Serving simple chat interface
+[OPENAI-STD] Chat completions request for model: "openai/gpt-4o-mini"
+[OPENAI-STD] Chat completions request for model: "openai/gpt-4o-mini"
+[OPENAI-STD] Chat completions request for model: "openai/gpt-4o-mini"
+[OPENAI-STD] Chat completions request for model: "openai/gpt-4o-mini"
+[OPENAI-STD] Chat completions request for model: "openai/gpt-4o-mini"
+OpenAI proxy listening on 3010
+📱 Serving simple chat interface
+📱 Serving simple chat interface
+📱 Serving simple chat interface
+[OPENAI-STD] Chat completions request for model: "openai/gpt-4o"
+[OPENAI-STD] Chat completions request for model: "openai/gpt-4o"
+[OPENAI-STD] Chat completions request for model: "openai/gpt-4o"
+[OPENAI-STD] Chat completions request for model: "openai/gpt-4o-mini"
+[OPENAI-STD] Chat completions request for model: "openai/gpt-4o-mini"
+[OPENAI-STD] Chat completions request for model: "openai/gpt-4o-mini"
+[OPENAI-STD] Chat completions request for model: "openai/gpt-4o-mini"
+[OPENAI-STD] Chat completions request for model: "openai/gpt-4o-mini"
+📱 Serving simple chat interface
+📱 Serving simple chat interface
+[OPENAI-STD] Chat completions request for model: "openai/gpt-4o-mini"
+[OPENAI-STD] Chat completions request for model: "openai/gpt-4o-mini"
+[OPENAI-STD] Chat completions request for model: "openai/gpt-4o-mini"
+OpenAI proxy listening on 3010
+📱 Serving simple chat interface
+📱 Serving simple chat interface
+[OPENAI-STD] Chat completions request for model: "openai/gpt-4o-mini"
+[OPENAI-STD] Chat completions request for model: "Phi-3-medium-4k-instruct"
+📱 Serving simple chat interface
+[OPENAI-STD] Chat completions request for model: "microsoft/Phi-3.5-mini-instruct"
+[OPENAI-STD] Chat completions request for model: "openai/gpt-4o-mini"
+📱 Serving simple chat interface
+[OPENAI-STD] Chat completions request for model: "openai/gpt-4o-mini"
+[OPENAI-STD] Chat completions request for model: "openai/gpt-4o-mini"
+📱 Serving simple chat interface
+[OPENAI-STD] Chat completions request for model: "Phi-3-mini-4k-instruct"
+[OPENAI-STD] Chat completions request for model: "Phi-3-mini-4k-instruct"
+OpenAI proxy listening on 3010
+📱 Serving simple chat interface
+📱 Serving simple chat interface
+[OPENAI-STD] Chat completions request for model: "openai/gpt-4o-mini"
+[OPENAI-STD] Chat completions request for model: "openai/gpt-4o-mini"
+[OPENAI-STD] Chat completions request for model: "openai/gpt-4o-mini"
+[OPENAI-STD] Chat completions request for model: "openai/gpt-4o-mini"
+[OPENAI-STD] Chat completions request for model: "gpt-4o-mini"
+[OPENAI-STD] Chat completions request for model: "gpt-4o-mini"
+[OPENAI-STD] Chat completions request for model: "gpt-4o-mini"
+[OPENAI-STD] Chat completions request for model: "gpt-4o-mini"
+OpenAI proxy listening on 3010
+📱 Serving simple chat interface
+📱 Serving simple chat interface
+📱 Serving simple chat interface
+📱 Serving simple chat interface
+[OPENAI-STD] Chat completions request for model: "openai/gpt-4o-mini"
+[OPENAI-STD] Chat completions request for model: "openai/gpt-4o-mini"
+[OPENAI-STD] Chat completions request for model: "openai/gpt-4o-mini"
+📱 Serving simple chat interface
+[OPENAI-STD] Chat completions request for model: "openai/gpt-4o-mini"
+[OPENAI-STD] Chat completions request for model: "openai/gpt-4o-mini"
+[OPENAI-STD] Chat completions request for model: "openai/gpt-4o-mini"
+[OPENAI-STD] Chat completions request for model: "gpt-4o-mini"
+OpenAI proxy listening on 3010
+📱 Serving simple chat interface
+[OPENAI-STD] Chat completions request for model: "openai/gpt-4o-mini"
+[OPENAI-STD] Chat completions request for model: "openai/gpt-4o-mini"
+[OPENAI-STD] Chat completions request for model: "openai/gpt-4o-mini"
+[OPENAI-STD] Chat completions request for model: "openai/gpt-4o-mini"
+📱 Serving simple chat interface
+OpenAI proxy listening on 3010
+[OPENAI-STD] Chat completions request for model: "openai/gpt-4o-mini"
+[OPENAI-STD] Chat completions request for model: "openai/gpt-4o-mini"
+[OPENAI-STD] Chat completions request for model: "openai/gpt-4o-mini"
+📱 Serving simple chat interface
+[OPENAI-STD] Chat completions request for model: "openai/gpt-4o-mini"
+📱 Serving simple chat interface
+📱 Serving simple chat interface
+📱 Serving simple chat interface
+📱 Serving simple chat interface
+📱 Serving simple chat interface
+📱 Serving simple chat interface
+📱 Serving simple chat interface
+OpenAI proxy listening on 3010
+📱 Serving simple chat interface
+📱 Serving simple chat interface
+[OPENAI-STD] Chat completions request for model: "AI21-Jamba-1.5-Large"
+📱 Serving simple chat interface
+[OPENAI-STD] Chat completions request for model: "openai/gpt-4o-mini"
+[OPENAI-STD] Chat completions request for model: "openai/gpt-4o-mini"
+📱 Serving simple chat interface
+OpenAI proxy listening on 3010
+📱 Serving simple chat interface
+[OPENAI-STD] Chat completions request for model: "openai/gpt-4o-mini"
+📱 Serving simple chat interface
+[OPENAI-STD] Chat completions request for model: "openai/gpt-4o-mini"
+[OPENAI-STD] Chat completions request for model: "openai/gpt-4o-mini"
+[OPENAI-STD] Chat completions request for model: "openai/gpt-4o-mini"
+[OPENAI-STD] Chat completions request for model: "openai/gpt-4o-mini"
+[OPENAI-STD] Chat completions request for model: "openai/gpt-4o-mini"
+[OPENAI-STD] Chat completions request for model: "openai/gpt-4o-mini"
+[OPENAI-STD] Chat completions request for model: "openai/gpt-4o-mini"
+OpenAI proxy listening on 3010
+[OPENAI-STD] Chat completions request for model: "openai/gpt-4o-mini"
+[OPENAI-STD] Chat completions request for model: "openai/gpt-4o-mini"
+[OPENAI-STD] Chat completions request for model: "openai/gpt-4o-mini"
+[OPENAI-STD] Chat completions request for model: "openai/gpt-4o-mini"
+OpenAI proxy listening on 3010
+📱 Serving simple chat interface
+📱 Serving simple chat interface
+[OPENAI-STD] Chat completions request for model: "openai/gpt-4o-mini"
+[OPENAI-STD] Chat completions request for model: "openai/gpt-4o-mini"
+[OPENAI-STD] Chat completions request for model: "openai/gpt-4o-mini"
+[OPENAI-STD] Chat completions request for model: "openai/gpt-4o-mini"
+📱 Serving simple chat interface
+📱 Serving simple chat interface
+📱 Serving simple chat interface
+OpenAI proxy listening on 3010
+📱 Serving simple chat interface
+📱 Serving simple chat interface
+[OPENAI-STD] Chat completions request for model: "openai/gpt-4o-mini"
+[OPENAI-STD] Chat completions request for model: "openai/gpt-4o-mini"
+[OPENAI-STD] Chat completions request for model: "openai/gpt-4o-mini"
+[OPENAI-STD] Chat completions request for model: "openai/gpt-4o-mini"
+OpenAI proxy listening on 3010
+OpenAI proxy listening on 3010
+📱 Serving simple chat interface
+[OPENAI-STD] Chat completions request for model: "openai/gpt-4o-mini"
+[OPENAI-STD] Chat completions request for model: "openai/gpt-4o-mini"
+[OPENAI-STD] Chat completions request for model: "openai/gpt-4o-mini"
+[OPENAI-STD] Chat completions request for model: "openai/gpt-4o-mini"
+[OPENAI-STD] Chat completions request for model: "openai/gpt-4o-mini"
+[OPENAI-STD] Chat completions request for model: "openai/gpt-4o-mini"
+[OPENAI-STD] Chat completions request for model: "openai/gpt-4o-mini"
+📱 Serving simple chat interface
+[OPENAI-STD] Chat completions request for model: "openai/gpt-4o-mini"
+[OPENAI-STD] Chat completions request for model: "openai/gpt-4o-mini"
+OpenAI proxy listening on 3010
+OpenAI proxy listening on 3010
+📱 Serving simple chat interface
+📱 Serving simple chat interface
+[OPENAI-STD] Chat completions request for model: "openai/gpt-4o-mini"
+[OPENAI-STD] Chat completions request for model: "openai/gpt-4o-mini"
+[OPENAI-STD] Chat completions request for model: "openai/gpt-4o-mini"
+[OPENAI-STD] Chat completions request for model: "openai/gpt-4o-mini"
+[OPENAI-STD] Chat completions request for model: "openai/gpt-4o-mini"
+📱 Serving simple chat interface
+📱 Serving simple chat interface
+[OPENAI-STD] Chat completions request for model: "openai/gpt-4o-mini"
+[OPENAI-STD] Chat completions request for model: "openai/gpt-4o-mini"
+[OPENAI-STD] Chat completions request for model: "openai/gpt-4o-mini"
+[OPENAI-STD] Chat completions request for model: "openai/gpt-4o-mini"
+[OPENAI-STD] Chat completions request for model: "openai/gpt-4o-mini"
+OpenAI proxy listening on 3010
+📱 Serving simple chat interface
+[OPENAI-STD] Chat completions request for model: "openai/gpt-4o-mini"
+[OPENAI-STD] Chat completions request for model: "openai/gpt-4o-mini"
+[OPENAI-STD] Chat completions request for model: "openai/gpt-4o-mini"
+📱 Serving simple chat interface
+[OPENAI-STD] Chat completions request for model: "openai/gpt-4o-mini"
+[OPENAI-STD] Chat completions request for model: "openai/gpt-4o-mini"
+[OPENAI-STD] Chat completions request for model: "openai/gpt-4o-mini"
+[OPENAI-STD] Chat completions request for model: "openai/gpt-4o-mini"
+[OPENAI-STD] Chat completions request for model: "openai/gpt-4o-mini"
+[OPENAI-STD] Chat completions request for model: "openai/gpt-4o-mini"
+[OPENAI-STD] Chat completions request for model: "openai/gpt-4o-mini"
+[OPENAI-STD] Chat completions request for model: "openai/gpt-4o-mini"
+[OPENAI-STD] Chat completions request for model: "openai/gpt-4o-mini"
+[OPENAI-STD] Chat completions request for model: "openai/gpt-4o-mini"
+[OPENAI-STD] Chat completions request for model: "openai/gpt-4o-mini"
+OpenAI proxy listening on 3010
+📱 Serving simple chat interface
+[OPENAI-STD] Chat completions request for model: "openai/gpt-4o-mini"
+[OPENAI-STD] Chat completions request for model: "openai/gpt-4o-mini"
+[OPENAI-STD] Chat completions request for model: "openai/gpt-4o-mini"
+📱 Serving simple chat interface
+[OPENAI-STD] Chat completions request for model: "openai/gpt-4o-mini"
+[OPENAI-STD] Chat completions request for model: "openai/gpt-4o-mini"
+📱 Serving simple chat interface
+[OPENAI-STD] Chat completions request for model: "openai/gpt-4o-mini"
+[OPENAI-STD] Chat completions request for model: "openai/gpt-4o-mini"
+[OPENAI-STD] Chat completions request for model: "Cohere-command-r-plus-08-2024"
+[OPENAI-STD] Chat completions request for model: "openai/gpt-4o-mini"
+[OPENAI-STD] Chat completions request for model: "openai/gpt-4o-mini"
+[OPENAI-STD] Chat completions request for model: "Cohere-command-r-plus-08-2024"
+[OPENAI-STD] Chat completions request for model: "Cohere-command-r-plus-08-2024"
+[OPENAI-STD] Chat completions request for model: "Cohere-command-r-plus-08-2024"
+[OPENAI-STD] Chat completions request for model: "Cohere-command-r-plus-08-2024"
+OpenAI proxy listening on 3010
+OpenAI proxy listening on 3010
+📱 Serving simple chat interface
+[OPENAI-STD] Chat completions request for model: "openai/gpt-4o-mini"
+[OPENAI-STD] Chat completions request for model: "openai/gpt-4o-mini"
+[OPENAI-STD] Chat completions request for model: "openai/gpt-4o-mini"
+[OPENAI-STD] Chat completions request for model: "openai/gpt-4o-mini"
+📱 Serving simple chat interface
+[OPENAI-STD] Chat completions request for model: "openai/gpt-4o-mini"
+[OPENAI-STD] Chat completions request for model: "gpt-4o-mini"
+📱 Serving simple chat interface
+OpenAI proxy listening on 3010
+📱 Serving simple chat interface
+[OPENAI-STD] Chat completions request for model: "gpt-4o-mini"
+[OPENAI-STD] Chat completions request for model: "gpt-4o"
+[OPENAI-STD] Models list request
+[OPENAI-STD] Models list request
+[OPENAI-STD] Models list request
+[OPENAI-STD] Models list request
+[OPENAI-STD] Chat completions request for model: "gpt-4o-mini"
+[OPENAI-STD] Chat completions request for model: "gpt-4o"
+[OPENAI-STD] Chat completions request for model: "gpt-4o-mini"
+[OPENAI-STD] Chat completions request for model: "Phi-3-mini-4k-instruct"
+[OPENAI-STD] Chat completions request for model: "Meta-Llama-3.1-8B-Instruct"
+[OPENAI-STD] Models list request
+[OPENAI-STD] Chat completions request for model: "AI21-Jamba-1.5-Mini"
+[OPENAI-STD] Chat completions request for model: "microsoft/Phi-3.5-vision-instruct"
+[OPENAI-STD] Chat completions request for model: "Phi-3.5-MoE-instruct"
+[OPENAI-STD] Chat completions request for model: "microsoft/Phi-3.5-MoE-instruct"
+[OPENAI-STD] Models list request
+[OPENAI-STD] Models list request
+[OPENAI-STD] Chat completions request for model: "Phi-3-medium-128k-instruct"
+[OPENAI-STD] Chat completions request for model: "Phi-3-medium-128k-instruct"
+[OPENAI-STD] Chat completions request for model: "microsoft/Phi-3-medium-128k-instruct"
+[OPENAI-STD] Chat completions request for model: "o1-mini"
+OpenAI standard API error PermissionDeniedError: 403 status code (no body)
+    at APIError.generate (file:///Users/dev/Documents/NIMDA/codespaces-models/node_modules/openai/error.mjs:47:20)
+    at OpenAI.makeStatusError (file:///Users/dev/Documents/NIMDA/codespaces-models/node_modules/openai/core.mjs:268:25)
+    at OpenAI.makeRequest (file:///Users/dev/Documents/NIMDA/codespaces-models/node_modules/openai/core.mjs:311:30)
+    at process.processTicksAndRejections (node:internal/process/task_queues:105:5)
+    at async file:///Users/dev/Documents/NIMDA/codespaces-models/server.js:258:22 {
+  status: 403,
+  headers: {
+    'content-length': '0',
+    date: 'Tue, 02 Sep 2025 23:59:14 GMT',
+    server: 'github.com',
+    vary: 'Origin',
+    'x-github-backend': 'Kubernetes',
+    'x-github-request-id': 'FA94:1177AD:37A109:493478:68B784D1'
+  },
+  request_id: undefined,
+  error: undefined,
+  code: undefined,
+  param: undefined,
+  type: undefined
+}
+[OPENAI-STD] Chat completions request for model: "o1-mini"
+OpenAI standard API error PermissionDeniedError: 403 status code (no body)
+    at APIError.generate (file:///Users/dev/Documents/NIMDA/codespaces-models/node_modules/openai/error.mjs:47:20)
+    at OpenAI.makeStatusError (file:///Users/dev/Documents/NIMDA/codespaces-models/node_modules/openai/core.mjs:268:25)
+    at OpenAI.makeRequest (file:///Users/dev/Documents/NIMDA/codespaces-models/node_modules/openai/core.mjs:311:30)
+    at process.processTicksAndRejections (node:internal/process/task_queues:105:5)
+    at async file:///Users/dev/Documents/NIMDA/codespaces-models/server.js:258:22 {
+  status: 403,
+  headers: {
+    'content-length': '0',
+    date: 'Tue, 02 Sep 2025 23:59:37 GMT',
+    server: 'github.com',
+    vary: 'Origin',
+    'x-github-backend': 'Kubernetes',
+    'x-github-request-id': 'FA9C:30E41F:3752E5:48ED70:68B784E9'
+  },
+  request_id: undefined,
+  error: undefined,
+  code: undefined,
+  param: undefined,
+  type: undefined
+}
+[OPENAI-STD] Chat completions request for model: "o1-preview"
+OpenAI standard API error PermissionDeniedError: 403 status code (no body)
+    at APIError.generate (file:///Users/dev/Documents/NIMDA/codespaces-models/node_modules/openai/error.mjs:47:20)
+    at OpenAI.makeStatusError (file:///Users/dev/Documents/NIMDA/codespaces-models/node_modules/openai/core.mjs:268:25)
+    at OpenAI.makeRequest (file:///Users/dev/Documents/NIMDA/codespaces-models/node_modules/openai/core.mjs:311:30)
+    at process.processTicksAndRejections (node:internal/process/task_queues:105:5)
+    at async file:///Users/dev/Documents/NIMDA/codespaces-models/server.js:258:22 {
+  status: 403,
+  headers: {
+    'content-length': '0',
+    date: 'Tue, 02 Sep 2025 23:59:45 GMT',
+    server: 'github.com',
+    vary: 'Origin',
+    'x-github-backend': 'Kubernetes',
+    'x-github-request-id': 'FA9F:B5309:37360A:48DC3A:68B784F1'
+  },
+  request_id: undefined,
+  error: undefined,
+  code: undefined,
+  param: undefined,
+  type: undefined
+}
+[OPENAI-STD] Chat completions request for model: "o1-preview"
+OpenAI standard API error PermissionDeniedError: 403 status code (no body)
+    at APIError.generate (file:///Users/dev/Documents/NIMDA/codespaces-models/node_modules/openai/error.mjs:47:20)
+    at OpenAI.makeStatusError (file:///Users/dev/Documents/NIMDA/codespaces-models/node_modules/openai/core.mjs:268:25)
+    at OpenAI.makeRequest (file:///Users/dev/Documents/NIMDA/codespaces-models/node_modules/openai/core.mjs:311:30)
+    at process.processTicksAndRejections (node:internal/process/task_queues:105:5)
+    at async file:///Users/dev/Documents/NIMDA/codespaces-models/server.js:258:22 {
+  status: 403,
+  headers: {
+    'content-length': '0',
+    date: 'Tue, 02 Sep 2025 23:59:51 GMT',
+    server: 'github.com',
+    vary: 'Origin',
+    'x-github-backend': 'Kubernetes',
+    'x-github-request-id': 'FAA3:2279B9:36AC3E:485692:68B784F7'
+  },
+  request_id: undefined,
+  error: undefined,
+  code: undefined,
+  param: undefined,
+  type: undefined
+}
+[OPENAI-STD] Chat completions request for model: "Cohere-command-r-plus"
+OpenAI standard API error NotFoundError: 404 Unknown model: /Cohere-command-r-plus
+    at APIError.generate (file:///Users/dev/Documents/NIMDA/codespaces-models/node_modules/openai/error.mjs:50:20)
+    at OpenAI.makeStatusError (file:///Users/dev/Documents/NIMDA/codespaces-models/node_modules/openai/core.mjs:268:25)
+    at OpenAI.makeRequest (file:///Users/dev/Documents/NIMDA/codespaces-models/node_modules/openai/core.mjs:311:30)
+    at process.processTicksAndRejections (node:internal/process/task_queues:105:5)
+    at async file:///Users/dev/Documents/NIMDA/codespaces-models/server.js:258:22 {
+  status: 404,
+  headers: {
+    'content-length': '135',
+    'content-type': 'text/plain; charset=utf-8',
+    date: 'Tue, 02 Sep 2025 23:59:58 GMT',
+    server: 'github.com',
+    vary: 'Origin',
+    'x-content-type-options': 'nosniff',
+    'x-github-backend': 'Kubernetes',
+    'x-github-request-id': 'FAAA:2B4E6:37E0B6:499061:68B784FE'
+  },
+  request_id: undefined,
+  error: {
+    code: 'unknown_model',
+    message: 'Unknown model: /Cohere-command-r-plus',
+    details: 'Unknown model: /Cohere-command-r-plus'
+  },
+  code: 'unknown_model',
+  param: undefined,
+  type: undefined
+}
+[OPENAI-STD] Chat completions request for model: "Cohere-command-r-plus"
+OpenAI standard API error NotFoundError: 404 Unknown model: /Cohere-command-r-plus
+    at APIError.generate (file:///Users/dev/Documents/NIMDA/codespaces-models/node_modules/openai/error.mjs:50:20)
+    at OpenAI.makeStatusError (file:///Users/dev/Documents/NIMDA/codespaces-models/node_modules/openai/core.mjs:268:25)
+    at OpenAI.makeRequest (file:///Users/dev/Documents/NIMDA/codespaces-models/node_modules/openai/core.mjs:311:30)
+    at process.processTicksAndRejections (node:internal/process/task_queues:105:5)
+    at async file:///Users/dev/Documents/NIMDA/codespaces-models/server.js:258:22 {
+  status: 404,
+  headers: {
+    'content-length': '135',
+    'content-type': 'text/plain; charset=utf-8',
+    date: 'Wed, 03 Sep 2025 00:00:06 GMT',
+    server: 'github.com',
+    vary: 'Origin',
+    'x-content-type-options': 'nosniff',
+    'x-github-backend': 'Kubernetes',
+    'x-github-request-id': 'FAB0:1F5716:39E9A6:4B9652:68B78506'
+  },
+  request_id: undefined,
+  error: {
+    code: 'unknown_model',
+    message: 'Unknown model: /Cohere-command-r-plus',
+    details: 'Unknown model: /Cohere-command-r-plus'
+  },
+  code: 'unknown_model',
+  param: undefined,
+  type: undefined
+}
+[OPENAI-STD] Chat completions request for model: "Cohere-command-r"
+OpenAI standard API error NotFoundError: 404 Unknown model: /Cohere-command-r
+    at APIError.generate (file:///Users/dev/Documents/NIMDA/codespaces-models/node_modules/openai/error.mjs:50:20)
+    at OpenAI.makeStatusError (file:///Users/dev/Documents/NIMDA/codespaces-models/node_modules/openai/core.mjs:268:25)
+    at OpenAI.makeRequest (file:///Users/dev/Documents/NIMDA/codespaces-models/node_modules/openai/core.mjs:311:30)
+    at process.processTicksAndRejections (node:internal/process/task_queues:105:5)
+    at async file:///Users/dev/Documents/NIMDA/codespaces-models/server.js:258:22 {
+  status: 404,
+  headers: {
+    'content-length': '125',
+    'content-type': 'text/plain; charset=utf-8',
+    date: 'Wed, 03 Sep 2025 00:00:15 GMT',
+    server: 'github.com',
+    vary: 'Origin',
+    'x-content-type-options': 'nosniff',
+    'x-github-backend': 'Kubernetes',
+    'x-github-request-id': 'FAB8:207E0C:3787E0:494161:68B7850E'
+  },
+  request_id: undefined,
+  error: {
+    code: 'unknown_model',
+    message: 'Unknown model: /Cohere-command-r',
+    details: 'Unknown model: /Cohere-command-r'
+  },
+  code: 'unknown_model',
+  param: undefined,
+  type: undefined
+}
+[OPENAI-STD] Chat completions request for model: "Cohere-command-r"
+OpenAI standard API error NotFoundError: 404 Unknown model: /Cohere-command-r
+    at APIError.generate (file:///Users/dev/Documents/NIMDA/codespaces-models/node_modules/openai/error.mjs:50:20)
+    at OpenAI.makeStatusError (file:///Users/dev/Documents/NIMDA/codespaces-models/node_modules/openai/core.mjs:268:25)
+    at OpenAI.makeRequest (file:///Users/dev/Documents/NIMDA/codespaces-models/node_modules/openai/core.mjs:311:30)
+    at process.processTicksAndRejections (node:internal/process/task_queues:105:5)
+    at async file:///Users/dev/Documents/NIMDA/codespaces-models/server.js:258:22 {
+  status: 404,
+  headers: {
+    'content-length': '125',
+    'content-type': 'text/plain; charset=utf-8',
+    date: 'Wed, 03 Sep 2025 00:00:21 GMT',
+    server: 'github.com',
+    vary: 'Origin',
+    'x-content-type-options': 'nosniff',
+    'x-github-backend': 'Kubernetes',
+    'x-github-request-id': 'FABC:1915E8:399C9F:4B6619:68B78515'
+  },
+  request_id: undefined,
+  error: {
+    code: 'unknown_model',
+    message: 'Unknown model: /Cohere-command-r',
+    details: 'Unknown model: /Cohere-command-r'
+  },
+  code: 'unknown_model',
+  param: undefined,
+  type: undefined
+}
+[OPENAI-STD] Chat completions request for model: "Cohere-command-r-08-2024"
+[OPENAI-STD] Chat completions request for model: "Cohere-command-r-08-2024"
+[OPENAI-STD] Chat completions request for model: "Cohere-command-r-08-2024"
+[OPENAI-STD] Chat completions request for model: "Cohere-command-r-plus-08-2024"
+[OPENAI-STD] Chat completions request for model: "Cohere-command-r-plus-08-2024"
+[OPENAI-STD] Chat completions request for model: "mistral-ai/Mistral-small"
+OpenAI standard API error NotFoundError: 404 Unknown model: mistral-ai/Mistral-small
+    at APIError.generate (file:///Users/dev/Documents/NIMDA/codespaces-models/node_modules/openai/error.mjs:50:20)
+    at OpenAI.makeStatusError (file:///Users/dev/Documents/NIMDA/codespaces-models/node_modules/openai/core.mjs:268:25)
+    at OpenAI.makeRequest (file:///Users/dev/Documents/NIMDA/codespaces-models/node_modules/openai/core.mjs:311:30)
+    at process.processTicksAndRejections (node:internal/process/task_queues:105:5)
+    at async file:///Users/dev/Documents/NIMDA/codespaces-models/server.js:258:22 {
+  status: 404,
+  headers: {
+    'content-length': '139',
+    'content-type': 'text/plain; charset=utf-8',
+    date: 'Wed, 03 Sep 2025 00:03:24 GMT',
+    server: 'github.com',
+    vary: 'Origin',
+    'x-content-type-options': 'nosniff',
+    'x-github-backend': 'Kubernetes',
+    'x-github-request-id': 'FB07:390F65:311CEB:425A5D:68B785CC'
+  },
+  request_id: undefined,
+  error: {
+    code: 'unknown_model',
+    message: 'Unknown model: mistral-ai/Mistral-small',
+    details: 'Unknown model: mistral-ai/Mistral-small'
+  },
+  code: 'unknown_model',
+  param: undefined,
+  type: undefined
+}
+[OPENAI-STD] Chat completions request for model: "mistral-ai/Mistral-small"
+OpenAI standard API error NotFoundError: 404 Unknown model: mistral-ai/Mistral-small
+    at APIError.generate (file:///Users/dev/Documents/NIMDA/codespaces-models/node_modules/openai/error.mjs:50:20)
+    at OpenAI.makeStatusError (file:///Users/dev/Documents/NIMDA/codespaces-models/node_modules/openai/core.mjs:268:25)
+    at OpenAI.makeRequest (file:///Users/dev/Documents/NIMDA/codespaces-models/node_modules/openai/core.mjs:311:30)
+    at process.processTicksAndRejections (node:internal/process/task_queues:105:5)
+    at async file:///Users/dev/Documents/NIMDA/codespaces-models/server.js:258:22 {
+  status: 404,
+  headers: {
+    'content-length': '139',
+    'content-type': 'text/plain; charset=utf-8',
+    date: 'Wed, 03 Sep 2025 00:03:30 GMT',
+    server: 'github.com',
+    vary: 'Origin',
+    'x-content-type-options': 'nosniff',
+    'x-github-backend': 'Kubernetes',
+    'x-github-request-id': 'FB0E:10DD13:332E02:446A71:68B785D1'
+  },
+  request_id: undefined,
+  error: {
+    code: 'unknown_model',
+    message: 'Unknown model: mistral-ai/Mistral-small',
+    details: 'Unknown model: mistral-ai/Mistral-small'
+  },
+  code: 'unknown_model',
+  param: undefined,
+  type: undefined
+}
+[OPENAI-STD] Chat completions request for model: "Mistral-small"
+OpenAI standard API error NotFoundError: 404 Unknown model: /Mistral-small
+    at APIError.generate (file:///Users/dev/Documents/NIMDA/codespaces-models/node_modules/openai/error.mjs:50:20)
+    at OpenAI.makeStatusError (file:///Users/dev/Documents/NIMDA/codespaces-models/node_modules/openai/core.mjs:268:25)
+    at OpenAI.makeRequest (file:///Users/dev/Documents/NIMDA/codespaces-models/node_modules/openai/core.mjs:311:30)
+    at process.processTicksAndRejections (node:internal/process/task_queues:105:5)
+    at async file:///Users/dev/Documents/NIMDA/codespaces-models/server.js:258:22 {
+  status: 404,
+  headers: {
+    'content-length': '119',
+    'content-type': 'text/plain; charset=utf-8',
+    date: 'Wed, 03 Sep 2025 00:03:36 GMT',
+    server: 'github.com',
+    vary: 'Origin',
+    'x-content-type-options': 'nosniff',
+    'x-github-backend': 'Kubernetes',
+    'x-github-request-id': 'FB19:141C4A:31D271:43159F:68B785D8'
+  },
+  request_id: undefined,
+  error: {
+    code: 'unknown_model',
+    message: 'Unknown model: /Mistral-small',
+    details: 'Unknown model: /Mistral-small'
+  },
+  code: 'unknown_model',
+  param: undefined,
+  type: undefined
+}
+[OPENAI-STD] Chat completions request for model: "Mistral-small"
+OpenAI standard API error NotFoundError: 404 Unknown model: /Mistral-small
+    at APIError.generate (file:///Users/dev/Documents/NIMDA/codespaces-models/node_modules/openai/error.mjs:50:20)
+    at OpenAI.makeStatusError (file:///Users/dev/Documents/NIMDA/codespaces-models/node_modules/openai/core.mjs:268:25)
+    at OpenAI.makeRequest (file:///Users/dev/Documents/NIMDA/codespaces-models/node_modules/openai/core.mjs:311:30)
+    at process.processTicksAndRejections (node:internal/process/task_queues:105:5)
+    at async file:///Users/dev/Documents/NIMDA/codespaces-models/server.js:258:22 {
+  status: 404,
+  headers: {
+    'content-length': '119',
+    'content-type': 'text/plain; charset=utf-8',
+    date: 'Wed, 03 Sep 2025 00:03:40 GMT',
+    server: 'github.com',
+    vary: 'Origin',
+    'x-content-type-options': 'nosniff',
+    'x-github-backend': 'Kubernetes',
+    'x-github-request-id': 'FB19:141C4A:31D81D:431D4D:68B785D8'
+  },
+  request_id: undefined,
+  error: {
+    code: 'unknown_model',
+    message: 'Unknown model: /Mistral-small',
+    details: 'Unknown model: /Mistral-small'
+  },
+  code: 'unknown_model',
+  param: undefined,
+  type: undefined
+}
+[OPENAI-STD] Models list request
+[OPENAI-STD] Models list request
+📱 Serving simple chat interface
+[OPENAI-STD] Models list request
+[OPENAI-STD] Models list request
+[OPENAI-STD] Models list request
+[OPENAI-STD] Models list request
+[OPENAI-STD] Models list request
+[OPENAI-STD] Models list request

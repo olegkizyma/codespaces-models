@@ -3,7 +3,12 @@ import cors from "cors";
 import dotenv from "dotenv";
 import OpenAI from "openai";
 import path from "path";
+import { fileURLToPath } from 'url';
 import { ModelLimitsHandler } from "./model-limits-utils.mjs";
+
+// ES modules equivalent of __dirname
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 dotenv.config();
 
@@ -11,26 +16,35 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 
-// Serve simple static UI for testing at /ui
+// We'll mount static after root route to ensure '/' serves mobile.html
 app.use('/ui', express.static('public'));
 
-// Serve modern UI at root and /modern
+// Serve mobile-first Voice UI at root and /modern
+// Serve main page
 app.get('/', (req, res) => {
-  res.sendFile(path.join(process.cwd(), 'public', 'modern.html'));
+  console.log('📱 Serving simple chat interface');
+  res.sendFile(path.join(__dirname, 'public/simple.html'));
 });
 
 app.get('/modern', (req, res) => {
-  res.sendFile(path.join(process.cwd(), 'public', 'modern.html'));
+  res.sendFile(path.join(__dirname, 'public', 'mobile.html'));
 });
+
+app.get('/simple', (req, res) => {
+  res.sendFile(path.join(__dirname, 'public', 'simple.html'));
+});
+
+// Static assets at root (after overriding '/')
+app.use(express.static('public'));
 
 // Serve classic UI at /classic
 app.get('/classic', (req, res) => {
-  res.sendFile(path.join(process.cwd(), 'public', 'index.html'));
+  res.sendFile(path.join(__dirname, 'public', 'index.html'));
 });
 
 // Serve monitoring interface at /monitor
 app.get('/monitor', (req, res) => {
-  res.sendFile(path.join(process.cwd(), 'public', 'monitor.html'));
+  res.sendFile(path.join(__dirname, 'public', 'monitor.html'));
 });
 
 // Health check endpoint
@@ -48,8 +62,7 @@ const client = new OpenAI({ apiKey: OPENAI_API_KEY, baseURL: process.env.OPENAI_
 // Initialize limits handler
 const limitsHandler = new ModelLimitsHandler();
 
-// Simple health
-app.get("/", (req, res) => res.send({ ok: true, info: "OpenAI model proxy" }));
+// Simple health moved to /health (root serves UI)
 
 // POST /v1/proxy
 // body: { model: string, input: string | messages, type: "chat" | "completion" }
@@ -195,14 +208,50 @@ app.post('/v1/chat/completions', async (req, res) => {
   const startTime = Date.now();
   
   if (stream) {
-    return res.status(400).json({
-      error: {
-        message: "streaming is not supported yet",
-        type: "invalid_request_error",
-        param: "stream", 
-        code: null
+    try {
+      // Setup SSE headers
+      res.setHeader('Content-Type', 'text/event-stream');
+      res.setHeader('Cache-Control', 'no-cache, no-transform');
+      res.setHeader('Connection', 'keep-alive');
+      res.flushHeaders?.();
+
+      const responseStream = await client.chat.completions.create({
+        model,
+        messages,
+        stream: true,
+        ...otherOptions
+      });
+
+      for await (const chunk of responseStream) {
+        try {
+          // Send each chunk in OpenAI-compatible SSE format
+          res.write(`data: ${JSON.stringify(chunk)}\n\n`);
+        } catch (e) {
+          console.error('SSE write error:', e);
+          break;
+        }
       }
-    });
+
+      // Signal completion similar to OpenAI
+      res.write('data: [DONE]\n\n');
+      res.end();
+    } catch (err) {
+      console.error('Streaming error', err);
+      // If streaming setup failed before headers were committed
+      if (!res.headersSent) {
+        const statusCode = err?.status || err?.response?.status || 500;
+        return res.status(statusCode).json({
+          error: {
+            message: err?.message || String(err),
+            type: 'invalid_request_error',
+            param: 'stream',
+            code: err?.code || null
+          }
+        });
+      }
+      try { res.end(); } catch (_) {}
+    }
+    return;
   }
 
   try {

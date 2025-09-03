@@ -1,0 +1,142 @@
+<!DOCTYPE html>
+<html lang="uk">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Тест мобільного додатку</title>
+    <style>
+        * { box-sizing: border-box; }
+        body {
+            margin: 0;
+            background: #000000;
+            color: #ffffff;
+            font-family: -apple-system, BlinkMacSystemFont, sans-serif;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            text-align: center;
+        }
+        .test-container {
+            padding: 20px;
+            background: #111111;
+            border-radius: 12px;
+            border: 1px solid #333;
+            max-width: 400px;
+            width: 90%;
+        }
+        .status {
+            margin: 10px 0;
+            padding: 8px;
+            border-radius: 6px;
+        }
+        .success { background: rgba(0,255,136,0.1); color: #00ff88; }
+        .error { background: rgba(255,68,68,0.1); color: #ff4444; }
+        button {
+            background: #00ff88;
+            color: #000;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 8px;
+            font-size: 16px;
+            cursor: pointer;
+            margin: 8px;
+        }
+        button:hover {
+            background: #00cc66;
+        }
+    </style>
+</head>
+<body>
+    <div class="test-container">
+        <h1>🔧 Тест додатку</h1>
+        <div id="status"></div>
+        <button onclick="testApp()">🧪 Запустити тест</button>
+        <button onclick="location.href='/'">🏠 На головну</button>
+    </div>
+
+    <script>
+        function updateStatus(message, isError = false) {
+            document.getElementById('status').innerHTML += 
+                `<div class="status ${isError ? 'error' : 'success'}">${message}</div>`;
+        }
+
+        function testApp() {
+            document.getElementById('status').innerHTML = '';
+            updateStatus('🚀 Починаю тестування...');
+
+            // Test 1: CSS Variables
+            const root = getComputedStyle(document.documentElement);
+            const bgColor = root.getPropertyValue('--bg') || '#000000';
+            updateStatus(`✅ CSS змінні: ${bgColor}`);
+
+            // Test 2: Modern JS support
+            try {
+                const testArrow = () => 'arrow functions work';
+                const testTemplate = `template ${testArrow()} literals work`;
+                updateStatus('✅ ES6 підтримка: працює');
+            } catch (e) {
+                updateStatus(`❌ ES6 проблема: ${e.message}`, true);
+            }
+
+            // Test 3: Fetch API
+            if ('fetch' in window) {
+                updateStatus('✅ Fetch API: доступний');
+                
+                // Test server connection
+                fetch('/health')
+                    .then(response => {
+                        if (response.ok) {
+                            updateStatus('✅ Сервер: підключений');
+                        } else {
+                            updateStatus(`⚠️ Сервер: статус ${response.status}`, true);
+                        }
+                    })
+                    .catch(error => {
+                        updateStatus(`❌ Сервер: ${error.message}`, true);
+                    });
+            } else {
+                updateStatus('❌ Fetch API: недоступний', true);
+            }
+
+            // Test 4: Module support
+            if ('noModule' in HTMLScriptElement.prototype) {
+                updateStatus('✅ ES Modules: підтримуються');
+            } else {
+                updateStatus('❌ ES Modules: не підтримуються', true);
+            }
+
+            // Test 5: Service Worker
+            if ('serviceWorker' in navigator) {
+                updateStatus('✅ Service Worker: підтримується');
+            } else {
+                updateStatus('❌ Service Worker: не підтримується', true);
+            }
+
+            // Test 6: Touch events
+            if ('ontouchstart' in window) {
+                updateStatus('✅ Touch events: підтримуються');
+            } else {
+                updateStatus('ℹ️ Touch events: desktop режим');
+            }
+
+            // Test 7: Speech APIs
+            if ('speechSynthesis' in window) {
+                updateStatus('✅ Speech Synthesis: доступний');
+            } else {
+                updateStatus('❌ Speech Synthesis: недоступний', true);
+            }
+
+            if ('webkitSpeechRecognition' in window || 'SpeechRecognition' in window) {
+                updateStatus('✅ Speech Recognition: доступний');
+            } else {
+                updateStatus('❌ Speech Recognition: недоступний', true);
+            }
+        }
+
+        // Auto-run test on load
+        window.addEventListener('load', testApp);
+    </script>
+</body>
+</html>
