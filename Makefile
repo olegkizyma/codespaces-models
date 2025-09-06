@@ -194,7 +194,7 @@ install:
 		exit 1; \
 	fi
 	@echo '#!/usr/bin/env bash' > /tmp/aichat
-	@echo 'cd "$(SCRIPT_DIR)" && make chat "$$@"' >> /tmp/aichat
+	@echo 'cd "$(SCRIPT_DIR)" && make chat "$$@"' | sed "s|$(SCRIPT_DIR)|$(SCRIPT_DIR)|" >> /tmp/aichat
 	@chmod +x /tmp/aichat
 	@sudo mv /tmp/aichat /usr/local/bin/aichat
 	@echo "$(GREEN)✅ Встановлено! Тепер можна використовувати команду 'aichat' з будь-якої папки$(NC)"
@@ -207,7 +207,7 @@ install-openai:
 		exit 1; \
 	fi
 	@echo '#!/usr/bin/env bash' > /tmp/ai-openai
-	@echo 'cd "$(SCRIPT_DIR)" && make openai "$$@"' >> /tmp/ai-openai
+	@echo 'cd "$(SCRIPT_DIR)" && make openai "$$@"' | sed "s|$(SCRIPT_DIR)|$(SCRIPT_DIR)|" >> /tmp/ai-openai
 	@chmod +x /tmp/ai-openai
 	@sudo mv /tmp/ai-openai /usr/local/bin/ai-openai
 	@echo "$(GREEN)✅ Встановлено! Тепер можна використовувати команду 'ai-openai' з будь-якої папки$(NC)"
@@ -222,7 +222,7 @@ install-stop:
 		exit 1; \
 	fi
 	@echo '#!/usr/bin/env bash' > /tmp/ai-stop
-	@echo 'cd "$(SCRIPT_DIR)" && make stop "$$@"' >> /tmp/ai-stop
+	@echo 'cd "$(SCRIPT_DIR)" && make stop "$$@"' | sed "s|$(SCRIPT_DIR)|$(SCRIPT_DIR)|" >> /tmp/ai-stop
 	@chmod +x /tmp/ai-stop
 	@sudo mv /tmp/ai-stop /usr/local/bin/ai-stop
 	@echo "$(GREEN)✅ Встановлено! Тепер можна використовувати команду 'ai-stop' з будь-якої папки$(NC)"
@@ -263,6 +263,7 @@ help:
 	@echo "  make install-openai Встановити 'ai-openai' глобально"
 	@echo "  make install-all   Встановити обидві глобальні команди"
 	@echo "  make clean         Очистити тимчасові файли"
+	@echo "  make watchdog      Запустити watchdog автоперезапуск"
 	@echo "  make help          Показати цю довідку"
 	@echo ""
 	@echo "$(YELLOW)Режими роботи:$(NC)"
@@ -395,3 +396,8 @@ wait-health:
 
 # За замовчуванням показати довідку
 .DEFAULT_GOAL := help
+
+watchdog:
+	@echo "$(BLUE)🛡️ Запуск watchdog (автовідновлення)$(NC)"
+	@[ -x "$(SCRIPT_DIR)/watchdog.sh" ] || { echo "$(YELLOW)⚠️ watchdog.sh не виконуваний — додаю права$(NC)"; chmod +x "$(SCRIPT_DIR)/watchdog.sh"; }
+	@nohup "$(SCRIPT_DIR)/watchdog.sh" >/dev/null 2>&1 & echo "$(GREEN)✅ Watchdog запущено (PID $$!)$(NC)"

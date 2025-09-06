@@ -5,6 +5,7 @@ import OpenAI from "openai";
 import path from "path";
 import { fileURLToPath } from 'url';
 import { ModelLimitsHandler } from "./model-limits-utils.mjs";
+import os from 'os';
 
 // ES modules equivalent of __dirname
 const __filename = fileURLToPath(import.meta.url);
@@ -15,6 +16,316 @@ dotenv.config();
 const app = express();
 app.use(cors());
 app.use(express.json());
+
+// ===== Global process resilience =====
+let FATAL_ERROR_COUNT = 0;
+process.on('uncaughtException', (err)=>{
+  FATAL_ERROR_COUNT++; 
+  console.error('[FATAL] uncaughtException', err);
+  if(FATAL_ERROR_COUNT > 3){
+    console.error('[FATAL] Too many fatal errors, exiting to allow supervisor restart');
+    process.exit(1);
+  }
+});
+process.on('unhandledRejection', (reason)=>{
+  console.error('[WARN] unhandledRejection', reason);
+});
+
+function gracefulShutdown(signal){
+  console.log(`[SHUTDOWN] Received ${signal}, closing server...`);
+  try { server?.close(()=>{ console.log('[SHUTDOWN] Closed HTTP server'); process.exit(0); }); } catch(e){ console.error('Error closing server', e); process.exit(1);} 
+  setTimeout(()=>process.exit(1), 8000).unref();
+}
+['SIGINT','SIGTERM'].forEach(sig=> process.on(sig, ()=>gracefulShutdown(sig)));
+
+/**
+ * ===== Runtime Performance & Throttling Helpers =====
+ * Легка in‑memory реалізація:
+ *  - Rate limiting (per API key + model)
+ *  - Контроль максимальної кількості одночасних upstream викликів
+ *  - Черга очікування з тайм-аутом
+ * Все це OPTIONAL та вмикається через env.
+ */
+
+const RATE_LIMIT_ENABLED = toBool(process.env.RATE_LIMIT_ENABLED ?? '1');
+const RATE_LIMIT_PER_MINUTE = parseInt(process.env.RATE_LIMIT_PER_MINUTE || '30', 10); // дефолт під навантаження 20-30 req/min
+const RATE_LIMIT_BUCKET_LEEWAY = parseInt(process.env.RATE_LIMIT_BUCKET_LEEWAY || '2', 10); // запас
+const CONCURRENCY_ENABLED = toBool(process.env.UPSTREAM_CONCURRENCY_ENABLED ?? '1');
+const UPSTREAM_MAX_CONCURRENT = parseInt(process.env.UPSTREAM_MAX_CONCURRENT || '5', 10);
+const QUEUE_MAX_LENGTH = parseInt(process.env.UPSTREAM_QUEUE_MAX || '50', 10);
+const QUEUE_WAIT_TIMEOUT_MS = parseInt(process.env.UPSTREAM_QUEUE_TIMEOUT_MS || '30000', 10);
+
+function toBool(v){
+  v = String(v).trim().toLowerCase();
+  return ['1','true','yes','on'].includes(v);
+}
+
+// Sliding window counters: key => { count, windowStart }
+const rateCounters = new Map();
+function checkRateLimit(key){
+  if(!RATE_LIMIT_ENABLED) return { allowed: true };
+  const now = Date.now();
+  const windowMs = 60_000;
+  let entry = rateCounters.get(key);
+  if(!entry || (now - entry.windowStart) >= windowMs){
+    entry = { count: 0, windowStart: now };
+  }
+  entry.count += 1;
+  rateCounters.set(key, entry);
+  if(entry.count > (RATE_LIMIT_PER_MINUTE + RATE_LIMIT_BUCKET_LEEWAY)){
+    return { allowed: false, resetMs: entry.windowStart + windowMs - now, used: entry.count };
+  }
+  return { allowed: true, used: entry.count };
+}
+
+// Concurrency gate
+let activeUpstream = 0;
+const waitQueue = [];// each item: {resolve, reject, startedAt}
+
+function acquireSlot(){
+  if(!CONCURRENCY_ENABLED) return Promise.resolve(()=>{});
+  return new Promise((resolve, reject)=>{
+    const grant = () => {
+      activeUpstream += 1;
+      let released = false;
+      resolve(()=>{ if(!released){ released=true; activeUpstream = Math.max(0, activeUpstream-1); pumpQueue(); }});
+    };
+    if(activeUpstream < UPSTREAM_MAX_CONCURRENT){
+      grant();
+    } else {
+      if(waitQueue.length >= QUEUE_MAX_LENGTH){
+        return reject(new Error('queue_overflow'));
+      }
+      const item = { resolve: grant, reject, startedAt: Date.now() };
+      waitQueue.push(item);
+      // Timeout handling
+      setTimeout(()=>{
+        if(waitQueue.includes(item)){
+          const idx = waitQueue.indexOf(item); if(idx>=0) waitQueue.splice(idx,1);
+          item.reject(new Error('queue_timeout'));
+        }
+      }, QUEUE_WAIT_TIMEOUT_MS).unref?.();
+    }
+  });
+}
+
+function pumpQueue(){
+  if(!CONCURRENCY_ENABLED) return;
+  while(activeUpstream < UPSTREAM_MAX_CONCURRENT && waitQueue.length){
+    const next = waitQueue.shift();
+    next.resolve();
+  }
+}
+
+async function executeUpstream(task){
+  const release = await acquireSlot();
+  try { return await task(); } finally { release(); }
+}
+
+// Middleware applying rate limit & queue introspection
+app.use((req,res,next)=>{
+  // Only guard API routes under /v1/* (exclude /health, static)
+  if(!/\/v1\//.test(req.path)) return next();
+  const apiKey = getApiKeyFromRequest(req) || 'anon';
+  const model = req.body?.model || 'general';
+  const rateKey = `${apiKey}:${model}`;
+  const rl = checkRateLimit(rateKey);
+  if(!rl.allowed){
+    return res.status(429).json({
+      error: {
+        message: `Rate limit exceeded (limit ~${RATE_LIMIT_PER_MINUTE}/min). Retry after ${Math.ceil(rl.resetMs/1000)}s`,
+        type: 'rate_limit_exceeded',
+        param: 'model',
+        code: 'rate_limit'
+      },
+      rate_limit: {
+        window_seconds: 60,
+        used: rl.used,
+        limit: RATE_LIMIT_PER_MINUTE,
+        reset_ms: rl.resetMs
+      }
+    });
+  }
+  // Expose queue / concurrency metrics
+  res.setHeader('X-Upstream-Active', String(activeUpstream));
+  res.setHeader('X-Upstream-Queue', String(waitQueue.length));
+  next();
+});
+
+/** ================== Metrics / Prometheus ==================
+ * Легка реалізація без зовнішніх бібліотек.
+ * Формат: OpenMetrics / Prometheus text exposition.
+ */
+const METRICS_ENABLED = toBool(process.env.METRICS_ENABLED ?? '1');
+const METRICS_PATH = process.env.METRICS_PATH || '/metrics';
+
+// Counters / Gauges / Histograms storage
+const metrics = {
+  counters: {
+    http_requests_total: new Map(), // key: method|path|status
+    http_errors_total: 0,
+    rate_limit_exceeded_total: 0,
+    tokens_prompt_total: 0,
+    tokens_completion_total: 0
+  },
+  gauges: {
+    upstream_active: () => activeUpstream,
+    upstream_queue: () => waitQueue.length
+  },
+  histograms: {
+    http_request_duration_seconds: {
+      buckets: [0.05,0.1,0.25,0.5,1,2.5,5,10],
+      counts: Array(9).fill(0), // 8 buckets + inf
+      sum: 0,
+      count: 0
+    },
+    queue_wait_duration_seconds: {
+      buckets: [0.01,0.05,0.1,0.25,0.5,1,2.5,5],
+      counts: Array(9).fill(0),
+      sum: 0,
+      count: 0
+    }
+  },
+  lastScrape: 0
+};
+
+function observeDuration(seconds){
+  const dh = metrics.histograms.http_request_duration_seconds;
+  const qh = metrics.histograms.queue_wait_duration_seconds;
+  qh.count += 1; qh.sum += seconds;
+  let qplaced=false; for(let i=0;i<qh.buckets.length;i++){ if(seconds<=qh.buckets[i]){ qh.counts[i]+=1; qplaced=true; break; } }
+  if(!qplaced) qh.counts[qh.counts.length-1]+=1;
+  h.count += 1;
+  h.sum += seconds;
+  let placed = false;
+  for(let i=0;i<h.buckets.length;i++){
+    if(seconds <= h.buckets[i]){ h.counts[i]+=1; placed=true; break; }
+  }
+  if(!placed) h.counts[h.counts.length-1]+=1; // +Inf idx (last)
+}
+
+function incRequest(method,path,status,durationMs){
+  const key = `${method}|${path}|${status}`;
+  metrics.counters.http_requests_total.set(key,(metrics.counters.http_requests_total.get(key)||0)+1);
+  if(status >=500) metrics.counters.http_errors_total +=1;
+  observeDuration(durationMs/1000);
+}
+
+// Rate limit hook increment (wrap existing rate limit decision)
+const originalCheckRateLimit = checkRateLimit;
+checkRateLimit = function(key){
+  const res = originalCheckRateLimit(key);
+  if(!res.allowed) metrics.counters.rate_limit_exceeded_total +=1;
+  return res;
+};
+
+// Request timing middleware (must be after body parse, before routes) — exclude /metrics itself
+if (METRICS_ENABLED) {
+  app.use((req,res,next)=>{
+    if(req.path === METRICS_PATH) return next();
+    const start = Date.now();
+    res.once('finish',()=>{
+      try { incRequest(req.method, req.route?.path || req.path, res.statusCode, Date.now()-start); } catch(_){}
+    });
+    next();
+  });
+}
+
+function formatPrometheus(){
+  const lines = [];
+  lines.push('# HELP http_requests_total Total HTTP requests');
+  lines.push('# TYPE http_requests_total counter');
+  for(const [key,val] of metrics.counters.http_requests_total.entries()){
+    const [method,path,status] = key.split('|');
+    lines.push(`http_requests_total{method="${method}",path="${path}",status="${status}"} ${val}`);
+  }
+  lines.push('# HELP http_errors_total Total HTTP 5xx errors');
+  lines.push('# TYPE http_errors_total counter');
+  lines.push(`http_errors_total ${metrics.counters.http_errors_total}`);
+  lines.push('# HELP rate_limit_exceeded_total Number of rate limited requests');
+  lines.push('# TYPE rate_limit_exceeded_total counter');
+  lines.push(`rate_limit_exceeded_total ${metrics.counters.rate_limit_exceeded_total}`);
+  lines.push('# HELP tokens_prompt_total Total prompt tokens (approx)');
+  lines.push('# TYPE tokens_prompt_total counter');
+  lines.push(`tokens_prompt_total ${metrics.counters.tokens_prompt_total}`);
+  lines.push('# HELP tokens_completion_total Total completion tokens (approx)');
+  lines.push('# TYPE tokens_completion_total counter');
+  lines.push(`tokens_completion_total ${metrics.counters.tokens_completion_total}`);
+  lines.push('# HELP upstream_active_current Current active upstream operations');
+  lines.push('# TYPE upstream_active_current gauge');
+  lines.push(`upstream_active_current ${metrics.gauges.upstream_active()}`);
+  lines.push('# HELP upstream_queue_length Current queued upstream operations');
+  lines.push('# TYPE upstream_queue_length gauge');
+  lines.push(`upstream_queue_length ${metrics.gauges.upstream_queue()}`);
+  // Histogram
+  const h = metrics.histograms.http_request_duration_seconds;
+  lines.push('# HELP http_request_duration_seconds Request duration seconds');
+  lines.push('# TYPE http_request_duration_seconds histogram');
+  let cumulative = 0;
+  for(let i=0;i<h.buckets.length;i++){
+    cumulative += h.counts[i];
+    lines.push(`http_request_duration_seconds_bucket{le="${h.buckets[i]}"} ${cumulative}`);
+  }
+  cumulative += h.counts[h.counts.length-1];
+  lines.push(`http_request_duration_seconds_bucket{le="+Inf"} ${cumulative}`);
+  lines.push(`http_request_duration_seconds_sum ${h.sum}`);
+  lines.push(`http_request_duration_seconds_count ${h.count}`);
+  // Quantiles (approx from buckets) for convenience (Prometheus native preferred)
+  function quantileFrom(histo, q){
+    if(!histo.count) return 0;
+    const target = histo.count * q;
+    let cum = 0;
+    for(let i=0;i<histo.buckets.length;i++){
+      cum += histo.counts[i];
+      if(cum >= target) return histo.buckets[i];
+    }
+    return Infinity;
+  }
+  const p95 = quantileFrom(h,0.95);
+  const p99 = quantileFrom(h,0.99);
+  lines.push('# HELP http_request_duration_seconds_p95 Approx 95th percentile latency');
+  lines.push('# TYPE http_request_duration_seconds_p95 gauge');
+  lines.push(`http_request_duration_seconds_p95 ${p95}`);
+  lines.push('# HELP http_request_duration_seconds_p99 Approx 99th percentile latency');
+  lines.push('# TYPE http_request_duration_seconds_p99 gauge');
+  lines.push(`http_request_duration_seconds_p99 ${p99}`);
+  // Queue wait histogram
+  const qh = metrics.histograms.queue_wait_duration_seconds;
+  lines.push('# HELP queue_wait_duration_seconds Queue wait duration seconds');
+  lines.push('# TYPE queue_wait_duration_seconds histogram');
+  let qcum=0; for(let i=0;i<qh.buckets.length;i++){ qcum+=qh.counts[i]; lines.push(`queue_wait_duration_seconds_bucket{le="${qh.buckets[i]}"} ${qcum}`);} qcum+=qh.counts[qh.counts.length-1];
+  lines.push(`queue_wait_duration_seconds_bucket{le="+Inf"} ${qcum}`);
+  lines.push(`queue_wait_duration_seconds_sum ${qh.sum}`);
+  lines.push(`queue_wait_duration_seconds_count ${qh.count}`);
+  const qp95 = quantileFrom(qh,0.95);
+  const qp99 = quantileFrom(qh,0.99);
+  lines.push('# HELP queue_wait_duration_seconds_p95 Approx 95th percentile queue wait');
+  lines.push('# TYPE queue_wait_duration_seconds_p95 gauge');
+  lines.push(`queue_wait_duration_seconds_p95 ${qp95}`);
+  lines.push('# HELP queue_wait_duration_seconds_p99 Approx 99th percentile queue wait');
+  lines.push('# TYPE queue_wait_duration_seconds_p99 gauge');
+  lines.push(`queue_wait_duration_seconds_p99 ${qp99}`);
+  // Process metrics
+  const mem = process.memoryUsage();
+  lines.push('# HELP process_resident_memory_bytes Resident memory');
+  lines.push('# TYPE process_resident_memory_bytes gauge');
+  lines.push(`process_resident_memory_bytes ${mem.rss}`);
+  lines.push('# HELP process_uptime_seconds Process uptime seconds');
+  lines.push('# TYPE process_uptime_seconds gauge');
+  lines.push(`process_uptime_seconds ${process.uptime()}`);
+  lines.push('# HELP nodejs_active_handles Active libuv handles');
+  lines.push('# TYPE nodejs_active_handles gauge');
+  lines.push(`nodejs_active_handles ${(process._getActiveHandles?.().length)||0}`);
+  lines.push('# EOF');
+  return lines.join('\n')+'\n';
+}
+
+if (METRICS_ENABLED) {
+  app.get(METRICS_PATH, (req,res)=>{
+    res.setHeader('Content-Type','text/plain; version=0.0.4; charset=utf-8');
+    try { res.send(formatPrometheus()); } catch (e){ res.status(500).send('# metrics error'); }
+  });
+}
 
 // Strict OpenAI mode flag
 const STRICT_OPENAI_API = (() => {
@@ -439,7 +750,7 @@ app.post('/v1/embeddings', async (req, res) => {
         error: { message: 'you must provide model and input', type: 'invalid_request_error', param: null, code: null }
       });
     }
-    const response = await client.embeddings.create({ model, input, ...other });
+  const response = await executeUpstream(()=> client.embeddings.create({ model, input, ...other }));
     res.json(response);
   } catch (err) {
     const statusCode = err?.status || err?.response?.status || 500;
@@ -519,7 +830,7 @@ app.post('/v1/completions', async (req, res) => {
       return;
     }
 
-    const response = await client.chat.completions.create({ model, messages, ...other });
+  const response = await executeUpstream(()=> client.chat.completions.create({ model, messages, ...other }));
     const text = response?.choices?.[0]?.message?.content || '';
     const finish = response?.choices?.[0]?.finish_reason || 'stop';
     const payload = {
@@ -541,6 +852,68 @@ app.post('/v1/completions', async (req, res) => {
   }
 });
 } // end of non-strict endpoints
+
+// === Always-on endpoints (duplicated when STRICT_OPENAI_API enabled) ===
+// If strict mode is on, embeddings & legacy completions above were skipped – recreate minimal variants.
+if (STRICT_OPENAI_API) {
+  app.post('/v1/embeddings', async (req,res)=>{
+    try {
+      const client = getClient(req);
+      const { model, input, ...other } = req.body || {};
+      if (!model || typeof input === 'undefined') {
+        return res.status(400).json({ error: { message: 'you must provide model and input', type: 'invalid_request_error', param: null, code: null }});
+      }
+      const response = await executeUpstream(()=> client.embeddings.create({ model, input, ...other }));
+      res.json(response);
+    } catch (err){
+      const statusCode = err?.status || err?.response?.status || 500;
+      res.status(statusCode).json({ error: { message: err?.message || String(err), type: 'invalid_request_error', param: null, code: err?.code || null }});
+    }
+  });
+
+  app.post('/v1/completions', async (req,res)=>{
+    try {
+      const { model, prompt, stream = false, ...other } = req.body || {};
+      if (!model || typeof prompt === 'undefined') {
+        return res.status(400).json({ error: { message: 'you must provide model and prompt', type: 'invalid_request_error', param: null, code: null }});
+      }
+      const messages = Array.isArray(prompt)
+        ? prompt.map(p=>({ role:'user', content: String(p) }))
+        : [{ role:'user', content: String(prompt) }];
+      const client = getClient(req);
+      if (stream) {
+        res.setHeader('Content-Type', 'text/event-stream');
+        res.setHeader('Cache-Control', 'no-cache, no-transform');
+        res.setHeader('Connection', 'keep-alive');
+        res.flushHeaders?.();
+        try {
+          const responseStream = await client.chat.completions.create({ model, messages, stream: true, ...other });
+          for await (const chunk of responseStream) {
+            const delta = chunk?.choices?.[0]?.delta?.content || '';
+            const done = chunk?.choices?.[0]?.finish_reason || null;
+            const payload = { id: chunk?.id, object:'text_completion', created: Math.floor(Date.now()/1000), model, choices:[{ text: delta, index:0, logprobs:null, finish_reason: done }]};
+            res.write(`data: ${JSON.stringify(payload)}\n\n`);
+          }
+          res.write('data: [DONE]\n\n');
+          return res.end();
+        } catch (err){
+          if(!res.headersSent){
+            const statusCode = err?.status || err?.response?.status || 500;
+            return res.status(statusCode).json({ error: { message: err?.message || String(err), type: 'invalid_request_error', param: null, code: err?.code || null }});
+          }
+          return res.end();
+        }
+      }
+      const response = await executeUpstream(()=> client.chat.completions.create({ model, messages, ...other }));
+      const text = response?.choices?.[0]?.message?.content || '';
+      const finish = response?.choices?.[0]?.finish_reason || 'stop';
+      return res.json({ id: response?.id, object:'text_completion', created: Math.floor(Date.now()/1000), model, choices:[{ text, index:0, logprobs:null, finish_reason: finish }], usage: response?.usage });
+    } catch (err){
+      const statusCode = err?.status || err?.response?.status || 500;
+      res.status(statusCode).json({ error: { message: err?.message || String(err), type:'invalid_request_error', param:null, code: err?.code || null }});
+    }
+  });
+}
 
 // Standard OpenAI API endpoint - FULL COMPATIBILITY
 async function handleChatCompletions(req, res) {
@@ -590,28 +963,30 @@ async function handleChatCompletions(req, res) {
       res.setHeader('Cache-Control', 'no-cache, no-transform');
       res.setHeader('Connection', 'keep-alive');
       res.flushHeaders?.();
-
       const client = getClient(req);
-      const responseStream = await client.chat.completions.create({
-        model,
-        messages,
-        stream: true,
-        ...otherOptions
-      });
-
-      for await (const chunk of responseStream) {
-        try {
-          // Send each chunk in OpenAI-compatible SSE format
-          res.write(`data: ${JSON.stringify(chunk)}\n\n`);
-        } catch (e) {
-          console.error('SSE write error:', e);
-          break;
+      // Acquire slot for streaming lifetime
+      const release = CONCURRENCY_ENABLED ? await acquireSlot() : ()=>{};
+      // Approx prompt tokens (messages content length /4)
+      try {
+        const promptChars = messages.map(m=> (typeof m.content==='string'? m.content: JSON.stringify(m.content)||'')).join('').length;
+        metrics.counters.tokens_prompt_total += Math.ceil(promptChars/4);
+      } catch(_){}
+      let tokensApprox = 0; // completion
+      try {
+        const upstreamStream = await client.chat.completions.create({ model, messages, stream: true, ...otherOptions });
+        for await (const chunk of upstreamStream) {
+          try {
+            const delta = chunk?.choices?.[0]?.delta?.content || '';
+            tokensApprox += delta ? Math.ceil(delta.length / 4) : 0;
+            res.write(`data: ${JSON.stringify(chunk)}\n\n`);
+          } catch (e) {
+            console.error('SSE write error:', e); break;
+          }
         }
-      }
-
-      // Signal completion similar to OpenAI
-      res.write('data: [DONE]\n\n');
-      res.end();
+        res.write('data: [DONE]\n\n');
+        res.end();
+        metrics.counters.tokens_completion_total += tokensApprox;
+      } finally { release(); }
     } catch (err) {
       console.error('Streaming error', err);
       // If streaming setup failed before headers were committed
@@ -638,6 +1013,13 @@ async function handleChatCompletions(req, res) {
       messages,
       ...otherOptions
     });
+    // Non-stream token accounting
+    try {
+      const promptChars = messages.map(m=> (typeof m.content==='string'? m.content: JSON.stringify(m.content)||'')).join('').length;
+      metrics.counters.tokens_prompt_total += Math.ceil(promptChars/4);
+      const completionText = response?.choices?.map(c=>c.message?.content||'').join('') || '';
+      metrics.counters.tokens_completion_total += Math.ceil(completionText.length/4);
+    } catch(_){}
 
     // Log successful usage
     const responseTime = Date.now() - startTime;
