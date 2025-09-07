@@ -120,11 +120,17 @@ async function checkRateLimitAsync(key, model){
   if(!RATE_LIMIT_ENABLED) return { allowed: true };
   if(redisClient && redisAvailable){
     try{
+      // Priority: static config -> adaptive guess -> default RATE_LIMIT_PER_MINUTE
       let capacity = RATE_LIMIT_PER_MINUTE;
-      const adaptive = model? getAdaptiveGuess(model) : null;
-      if(adaptive) capacity = Math.min(capacity, adaptive);
+      if(model && STATIC_MODEL_LIMITS && STATIC_MODEL_LIMITS[model] && STATIC_MODEL_LIMITS[model].per_minute){
+        capacity = STATIC_MODEL_LIMITS[model].per_minute;
+      } else {
+        const adaptive = model? getAdaptiveGuess(model) : null;
+        if(adaptive) capacity = Math.min(capacity, adaptive);
+      }
+      // add leeway
       capacity = capacity + RATE_LIMIT_BUCKET_LEEWAY;
-      const refill_per_ms = (RATE_LIMIT_PER_MINUTE/60)/1000; // tokens per ms
+      const refill_per_ms = (capacity/60)/1000; // tokens per ms based on selected capacity
       const now = Date.now();
       const requested = 1;
       const res = await redisClient.eval(LUA_TOKEN_BUCKET, { keys: [ `rate:${key}` ], arguments: [ String(capacity), String(refill_per_ms), String(now), String(requested) ] });
@@ -292,78 +298,26 @@ const ADAPTIVE_DOWN_COOLDOWN_MS = 30_000;
 const ADAPTIVE_HARDCAP_THRESHOLD = 2; // consecutive 429 at low traffic -> hard cap
 let ADAPTIVE_PERSIST_PATH = path.join(process.cwd(), 'observed-rate-limits.json');
 
-function loadAdaptiveState(){
-  if(!ADAPTIVE_RATE_LIMITS) return;
+// Static model rate limits file (authoritative if present)
+const STATIC_MODEL_LIMITS_PATH = path.join(process.cwd(), 'model-rate-limits.json');
+let STATIC_MODEL_LIMITS = {};
+(async function loadStaticLimits(){
   try{
-    const fs = require('fs');
-    if(fs.existsSync(ADAPTIVE_PERSIST_PATH)){
-      const raw = JSON.parse(fs.readFileSync(ADAPTIVE_PERSIST_PATH,'utf-8'));
-      const now = Date.now();
-      for(const [model, rec] of Object.entries(raw||{})){
-        if(now - (rec.updated_at||0) < 24*60*60*1000){
-          adaptiveModelStats.set(model, { ...rec, windowStart: now, success:0, r429:0 });
-        }
-      }
-      console.log('[ADAPTIVE] loaded state for', adaptiveModelStats.size, 'models');
+    const fs = await import('node:fs');
+    if(fs.existsSync(STATIC_MODEL_LIMITS_PATH)){
+      const raw = fs.readFileSync(STATIC_MODEL_LIMITS_PATH,'utf-8');
+      STATIC_MODEL_LIMITS = JSON.parse(raw || '{}');
+      console.log('[STATIC-LIMITS] loaded', Object.keys(STATIC_MODEL_LIMITS).length, 'models');
     }
-  }catch(e){ console.warn('[ADAPTIVE] load error', e.message); }
-}
+  }catch(e){ console.warn('[STATIC-LIMITS] load error', e?.message || e); }
+})();
 
-function persistAdaptiveState(){
-  if(!ADAPTIVE_RATE_LIMITS) return;
-  try{
-    const fs = require('fs');
-    const out = {};
-    for(const [m,s] of adaptiveModelStats.entries()){
-      out[m] = { guess:s.guess, hardCap: !!s.hardCap, last429At: s.last429At||0, updated_at: s.updated_at||Date.now() };
-    }
-    fs.writeFileSync(ADAPTIVE_PERSIST_PATH, JSON.stringify(out,null,2));
-  }catch(e){ console.warn('[ADAPTIVE] persist error', e.message); }
-}
-
-function getOrInitAdaptive(model, base){
-  let s = adaptiveModelStats.get(model);
-  if(!s){
-    s = { guess: base || RATE_LIMIT_PER_MINUTE, success:0, r429:0, windowStart: Date.now(), lastUp:0, lastDown:0, hardCap:false, last429At:0, updated_at: Date.now() };
-    adaptiveModelStats.set(model,s);
-  }
-  return s;
-}
-
-function adjustAdaptiveOnSuccess(model){
-  if(!ADAPTIVE_RATE_LIMITS) return;
-  const s = getOrInitAdaptive(model);
-  const now = Date.now();
-  if(now - s.windowStart > ADAPTIVE_WINDOW_MS){
-    // window rollover
-    s.success = 0; s.r429 = 0; s.windowStart = now;
-  }
-  s.success++;
-  const utilization = s.success / Math.max(1, s.guess);
-  if(s.r429 === 0 && utilization >= 0.8 && (now - s.lastUp) > ADAPTIVE_UP_COOLDOWN_MS && !s.hardCap){
-    const newGuess = Math.min(ADAPTIVE_MAX_GUESS, Math.ceil(s.guess * ADAPTIVE_INCREASE_FACTOR));
-    if(newGuess > s.guess){ s.guess = newGuess; s.lastUp = now; s.updated_at = now; }
-  }
-}
-
-function adjustAdaptiveOn429(model){
-  if(!ADAPTIVE_RATE_LIMITS) return;
-  const s = getOrInitAdaptive(model);
-  const now = Date.now();
-  if(now - s.windowStart > ADAPTIVE_WINDOW_MS){ s.success=0; s.r429=0; s.windowStart=now; }
-  s.r429++; s.last429At = now;
-  if(s.r429 >= ADAPTIVE_HARDCAP_THRESHOLD && s.success <= 2){ s.hardCap = true; }
-  if((now - s.lastDown) > ADAPTIVE_DOWN_COOLDOWN_MS){
-    const factor = s.hardCap ? 0.5 : ADAPTIVE_DECREASE_FACTOR;
-    const newGuess = Math.max(ADAPTIVE_MIN_GUESS, Math.floor(s.guess * factor));
-    if(newGuess < s.guess){ s.guess = newGuess; s.lastDown = now; s.updated_at = now; }
-  }
-}
-
-// Periodic persistence
+// Periodic persistence (run load/persist inside async IIFE to allow dynamic import)
 if(ADAPTIVE_RATE_LIMITS){
-  loadAdaptiveState();
-  setInterval(()=>{ try{ persistAdaptiveState(); }catch(_){} }, 10*60_000).unref?.();
+  (async ()=>{
+    try{ await loadAdaptiveState(); }catch(e){ console.warn('[ADAPTIVE] load error', e?.message || e); }
+    setInterval(async ()=>{ try{ await persistAdaptiveState(); }catch(e){ console.warn('[ADAPTIVE] persist error', e?.message || e); } }, 10*60_000).unref?.();
+  })();
 }
 
 function ensurePathHistogram(p){
@@ -720,8 +674,8 @@ if (ENABLE_TTS_PROXY) {
         throw new Error(`TTS сервер повернув ${upstream.status}: ${upstream.statusText}`);
       }
 
-      // Пробрасываем важные заголовки, поддерживаем 200/206 и потоковую передачу без буферизации в памяти
-      const statusCode = upstream.status; // 200 или 206 (при Range)
+      // Пробрасываем важные заголовки, поддерживаем 200/206 и потоковую передачу без буферізації в пам'яті
+      const statusCode = upstream.status; // 200 або 206 (при Range)
       const ct = upstream.headers.get('content-type') || 'audio/wav';
       const cd = upstream.headers.get('content-disposition');
       const cl = upstream.headers.get('content-length');
@@ -743,7 +697,7 @@ if (ENABLE_TTS_PROXY) {
       res.setHeader('Access-Control-Allow-Origin', '*');
       res.setHeader('Access-Control-Allow-Methods', 'GET');
 
-      // Потоковая передача тела ответа
+      // Потокова передача тіла відповіді
       const { Readable } = await import('node:stream');
       const nodeStream = Readable.fromWeb(upstream.body);
       let sent = 0;
@@ -1371,85 +1325,17 @@ if (!STRICT_OPENAI_API) {
 async function handleModelsList(req, res) {
   console.log('[OPENAI-STD] Models list request');
 
-  // Approximate / observed or assumed upstream rate limits (per minute) for models.
-  // NOTE: These are heuristic / placeholder values; real limits depend on provider & account.
-  const MODEL_RATE_LIMITS = {
-    // AI21 Jamba (large context / heavier)
-    'ai21-labs/ai21-jamba-1.5-large': { per_minute: 8, window_seconds: 60, tier: 'large', note: 'Large context / higher cost' },
-    'ai21-labs/ai21-jamba-1.5-mini': { per_minute: 25, window_seconds: 60, tier: 'mini' },
-
-    // Cohere
-    'cohere/cohere-command-a': { per_minute: 15, window_seconds: 60, tier: 'general' },
-    'cohere/cohere-command-r-08-2024': { per_minute: 10, window_seconds: 60, tier: 'reasoning' },
-    'cohere/cohere-command-r-plus-08-2024': { per_minute: 6, window_seconds: 60, tier: 'reasoning-premium' },
-    'cohere/cohere-embed-v3-english': { per_minute: 70, window_seconds: 60, tier: 'embedding' },
-    'cohere/cohere-embed-v3-multilingual': { per_minute: 60, window_seconds: 60, tier: 'embedding' },
-
-    // Core42
-    'core42/jais-30b-chat': { per_minute: 6, window_seconds: 60, tier: '30b', note: 'Bigger model' },
-
-    // DeepSeek (strict upstream limits observed)
-    'deepseek/deepseek-r1': { per_minute: 1, window_seconds: 60, upstream: true, tier: 'reasoning', note: 'Observed upstream low limit' },
-    'deepseek/deepseek-r1-0528': { per_minute: 1, window_seconds: 60, upstream: true, tier: 'reasoning' },
-    'deepseek/deepseek-v3-0324': { per_minute: 1, window_seconds: 60, upstream: true, tier: 'general', note: 'Observed 1 req/min (429 beyond)' },
-
-    // Meta Llama vision / instruct / next gen
-    'meta/llama-3.2-11b-vision-instruct': { per_minute: 6, window_seconds: 60, tier: 'vision' },
-    'meta/llama-3.2-90b-vision-instruct': { per_minute: 3, window_seconds: 60, tier: 'vision-large' },
-    'meta/llama-3.3-70b-instruct': { per_minute: 4, window_seconds: 60, tier: '70b' },
-    'meta/llama-4-maverick-17b-128e-instruct-fp8': { per_minute: 5, window_seconds: 60, tier: '17b' },
-    'meta/llama-4-scout-17b-16e-instruct': { per_minute: 5, window_seconds: 60, tier: '17b' },
-    'meta/meta-llama-3.1-405b-instruct': { per_minute: 2, window_seconds: 60, tier: '405b', note: 'Very large (heuristic)' },
-    'meta/meta-llama-3.1-8b-instruct': { per_minute: 30, window_seconds: 60, tier: '8b' },
-
-    // Microsoft Phi / MAI
-    'microsoft/mai-ds-r1': { per_minute: 5, window_seconds: 60, tier: 'reasoning' },
-    'microsoft/phi-3-medium-128k-instruct': { per_minute: 15, window_seconds: 60, tier: 'medium-128k' },
-    'microsoft/phi-3-medium-4k-instruct': { per_minute: 18, window_seconds: 60, tier: 'medium-4k' },
-    'microsoft/phi-3-mini-128k-instruct': { per_minute: 35, window_seconds: 60, tier: 'mini-128k' },
-    'microsoft/phi-3-mini-4k-instruct': { per_minute: 40, window_seconds: 60, tier: 'mini-4k' },
-    'microsoft/phi-3-small-128k-instruct': { per_minute: 28, window_seconds: 60, tier: 'small-128k' },
-    'microsoft/phi-3-small-8k-instruct': { per_minute: 30, window_seconds: 60, tier: 'small-8k' },
-    'microsoft/phi-3.5-mini-instruct': { per_minute: 38, window_seconds: 60, tier: '3.5-mini' },
-    'microsoft/phi-3.5-moe-instruct': { per_minute: 15, window_seconds: 60, tier: '3.5-moe' },
-    'microsoft/phi-3.5-vision-instruct': { per_minute: 12, window_seconds: 60, tier: '3.5-vision' },
-    'microsoft/phi-4': { per_minute: 8, window_seconds: 60, tier: '4' },
-    'microsoft/phi-4-mini-instruct': { per_minute: 22, window_seconds: 60, tier: '4-mini' },
-    'microsoft/phi-4-mini-reasoning': { per_minute: 10, window_seconds: 60, tier: '4-mini-reasoning' },
-    'microsoft/phi-4-multimodal-instruct': { per_minute: 10, window_seconds: 60, tier: '4-multimodal' },
-    'microsoft/phi-4-reasoning': { per_minute: 6, window_seconds: 60, tier: '4-reasoning' },
-
-    // Mistral family
-    'mistral-ai/codestral-2501': { per_minute: 8, window_seconds: 60, tier: 'coding-large' },
-    'mistral-ai/ministral-3b': { per_minute: 45, window_seconds: 60, tier: '3b' },
-    'mistral-ai/mistral-large-2411': { per_minute: 6, window_seconds: 60, tier: 'large' },
-    'mistral-ai/mistral-medium-2505': { per_minute: 18, window_seconds: 60, tier: 'medium' },
-    'mistral-ai/mistral-nemo': { per_minute: 14, window_seconds: 60, tier: 'nemo' },
-    'mistral-ai/mistral-small-2503': { per_minute: 40, window_seconds: 60, tier: 'small' },
-
-    // OpenAI families (heuristic values approximated; adjust per acct)
-    'openai/gpt-4.1': { per_minute: 12, window_seconds: 60, tier: 'gpt-4.x' },
-    'openai/gpt-4.1-mini': { per_minute: 30, window_seconds: 60, tier: 'gpt-4.x-mini' },
-    'openai/gpt-4.1-nano': { per_minute: 45, window_seconds: 60, tier: 'gpt-4.x-nano' },
-    'openai/gpt-4o': { per_minute: 18, window_seconds: 60, tier: 'gpt-4o' },
-    'openai/gpt-4o-mini': { per_minute: 35, window_seconds: 60, tier: 'gpt-4o-mini' },
-    'openai/gpt-5': { per_minute: 5, window_seconds: 60, tier: 'gpt-5', note: 'Early / low throughput (heuristic)' },
-    'openai/gpt-5-chat': { per_minute: 5, window_seconds: 60, tier: 'gpt-5' },
-    'openai/gpt-5-mini': { per_minute: 12, window_seconds: 60, tier: 'gpt-5-mini' },
-    'openai/gpt-5-nano': { per_minute: 20, window_seconds: 60, tier: 'gpt-5-nano' },
-    'openai/o1': { per_minute: 6, window_seconds: 60, tier: 'o1' },
-    'openai/o1-mini': { per_minute: 16, window_seconds: 60, tier: 'o1-mini' },
-    'openai/o1-preview': { per_minute: 4, window_seconds: 60, tier: 'o1-preview', note: 'Preview reduced limit' },
-    'openai/o3': { per_minute: 5, window_seconds: 60, tier: 'o3' },
-    'openai/o3-mini': { per_minute: 14, window_seconds: 60, tier: 'o3-mini' },
-    'openai/o4-mini': { per_minute: 20, window_seconds: 60, tier: 'o4-mini' },
-    'openai/text-embedding-3-large': { per_minute: 30, window_seconds: 60, tier: 'embedding-large' },
-    'openai/text-embedding-3-small': { per_minute: 70, window_seconds: 60, tier: 'embedding-small' },
-
-    // XAI
-    'xai/grok-3': { per_minute: 6, window_seconds: 60, tier: 'grok' },
-    'xai/grok-3-mini': { per_minute: 18, window_seconds: 60, tier: 'grok-mini' }
+  // Use static model limits from file when available; fallback to a small default mapping
+  const MODEL_RATE_LIMITS = Object.keys(STATIC_MODEL_LIMITS).length ? { ...STATIC_MODEL_LIMITS } : {
+    // minimal fallback if no static file present (keeps old behavior safe)
+    default: { per_minute: 25, window_seconds: 60, tier: 'default' }
   };
+  // Merge static overrides (static file has priority)
+  if(STATIC_MODEL_LIMITS && Object.keys(STATIC_MODEL_LIMITS).length){
+    for(const [m,rec] of Object.entries(STATIC_MODEL_LIMITS)){
+      MODEL_RATE_LIMITS[m] = { ...(MODEL_RATE_LIMITS[m]||{}), ...rec };
+    }
+  }
   const DEFAULT_MODEL_RATE_LIMIT = { per_minute: 25, window_seconds: 60, tier: 'default' };
 
   const models = [

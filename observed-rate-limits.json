@@ -1,0 +1,14 @@
+{
+  "openai/gpt-4o-mini": {
+    "guess": 30,
+    "hardCap": false,
+    "last429At": 0,
+    "updated_at": 1757251759964
+  },
+  "deepseek/deepseek-v3-0324": {
+    "guess": 18,
+    "hardCap": false,
+    "last429At": 1757251773662,
+    "updated_at": 1757251773662
+  }
+}
