@@ -298,6 +298,135 @@ const ADAPTIVE_DOWN_COOLDOWN_MS = 30_000;
 const ADAPTIVE_HARDCAP_THRESHOLD = 2; // consecutive 429 at low traffic -> hard cap
 let ADAPTIVE_PERSIST_PATH = path.join(process.cwd(), 'observed-rate-limits.json');
 
+// --- Missing adaptive helper implementations (added) ---
+async function loadAdaptiveState(){
+  if(!ADAPTIVE_RATE_LIMITS) return;
+  try {
+    const fs = await import('node:fs');
+    if(fs.existsSync(ADAPTIVE_PERSIST_PATH)){
+      const raw = fs.readFileSync(ADAPTIVE_PERSIST_PATH,'utf-8');
+      if(raw){
+        const data = JSON.parse(raw);
+        if(Array.isArray(data)){
+          for(const entry of data){
+            if(entry && entry.model){
+              adaptiveModelStats.set(entry.model, { ...entry, guess: clampAdaptiveGuess(entry.guess) });
+            }
+          }
+        } else if(typeof data === 'object') { // legacy object form { model: {guess,...} }
+          for(const [model, stats] of Object.entries(data)){
+            adaptiveModelStats.set(model, { ...stats, guess: clampAdaptiveGuess(stats.guess) });
+          }
+        }
+      }
+    }
+  } catch(e){ throw e; }
+}
+
+async function persistAdaptiveState(){
+  if(!ADAPTIVE_RATE_LIMITS) return;
+  try {
+    const fs = await import('node:fs');
+    const arr = [];
+    for(const [model, stats] of adaptiveModelStats.entries()){
+      arr.push({ model, ...stats });
+    }
+    fs.writeFileSync(ADAPTIVE_PERSIST_PATH, JSON.stringify(arr,null,2));
+  } catch(e){ throw e; }
+}
+
+function clampAdaptiveGuess(v){
+  if(typeof v !== 'number' || isNaN(v)) return ADAPTIVE_MIN_GUESS;
+  return Math.min(ADAPTIVE_MAX_GUESS, Math.max(ADAPTIVE_MIN_GUESS, Math.round(v)));
+}
+
+function ensureAdaptive(model){
+  let s = adaptiveModelStats.get(model);
+  if(!s){
+    s = { guess: RATE_LIMIT_PER_MINUTE || 30, success:0, r429:0, windowStart: Date.now(), lastUp:0, lastDown:0, hardCap:false, last429At:0 };
+    s.guess = clampAdaptiveGuess(s.guess);
+    adaptiveModelStats.set(model, s);
+  }
+  return s;
+}
+
+function adjustAdaptiveOnSuccess(model){
+  if(!ADAPTIVE_RATE_LIMITS) return;
+  try {
+    const now = Date.now();
+    const s = ensureAdaptive(model);
+    s.success += 1;
+    // Window roll
+    if((now - s.windowStart) > ADAPTIVE_WINDOW_MS){
+      s.success = 1; // keep current success
+      s.r429 = 0;
+      s.windowStart = now;
+    }
+    // Increase only if no recent 429 in down cooldown and up cooldown passed
+    if(!s.hardCap && s.r429 === 0 && (now - s.lastUp) > ADAPTIVE_UP_COOLDOWN_MS){
+      const newGuess = clampAdaptiveGuess(s.guess * ADAPTIVE_INCREASE_FACTOR);
+      if(newGuess > s.guess){
+        s.guess = newGuess;
+        s.lastUp = now;
+        // reset counters lightly to avoid runaway
+        s.success = 0; s.r429 = 0; s.windowStart = now;
+      }
+    }
+  } catch(e){ /* noop */ }
+}
+
+function adjustAdaptiveOn429(model){
+  if(!ADAPTIVE_RATE_LIMITS) return;
+  try {
+    const now = Date.now();
+    const s = ensureAdaptive(model);
+    s.r429 += 1;
+    s.last429At = now;
+    // Window roll
+    if((now - s.windowStart) > ADAPTIVE_WINDOW_MS){
+      s.success = 0; s.r429 = 1; s.windowStart = now;
+    }
+    if((now - s.lastDown) > ADAPTIVE_DOWN_COOLDOWN_MS){
+      const newGuess = clampAdaptiveGuess(s.guess * ADAPTIVE_DECREASE_FACTOR);
+      if(newGuess < s.guess){
+        s.guess = newGuess;
+        s.lastDown = now;
+      }
+    }
+    if(s.r429 >= ADAPTIVE_HARDCAP_THRESHOLD && s.guess <= (ADAPTIVE_MIN_GUESS+1)){
+      s.hardCap = true;
+    }
+  } catch(e){ /* noop */ }
+}
+
+// ==== Daily usage tracking (per UTC day) ===================================
+// Simple in-memory counters (reset on process restart) to expose approximate
+// daily request & error counts per model and hours until reset.
+const dailyModelUsage = new Map(); // model -> { date, count, errors }
+function currentUTCDate(){ return new Date().toISOString().slice(0,10); }
+function ensureDailyRecord(model){
+  const today = currentUTCDate();
+  let rec = dailyModelUsage.get(model);
+  if(!rec || rec.date !== today){
+    rec = { date: today, count: 0, errors: 0 };
+    dailyModelUsage.set(model, rec);
+  }
+  return rec;
+}
+function incrementDailyUsage(model, isError){
+  if(!model) return;
+  try {
+    const rec = ensureDailyRecord(model);
+    if(isError) rec.errors++; else rec.count++;
+  } catch(_){/*noop*/}
+}
+function hoursUntilUtcReset(){
+  const now = new Date();
+  const midnight = new Date(now);
+  midnight.setUTCHours(24,0,0,0);
+  return (midnight - now)/3600000;
+}
+
 // Static model rate limits file (authoritative if present)
 const STATIC_MODEL_LIMITS_PATH = path.join(process.cwd(), 'model-rate-limits.json');
 let STATIC_MODEL_LIMITS = {};
@@ -336,20 +465,19 @@ function observeDurationForPath(p, seconds){
     if(!placed) h.counts[h.counts.length-1]+=1;
   }catch(e){/* noop */}
 }
-
 function observeDuration(seconds){
   const dh = metrics.histograms.http_request_duration_seconds;
   const qh = metrics.histograms.queue_wait_duration_seconds;
   qh.count += 1; qh.sum += seconds;
   let qplaced=false; for(let i=0;i<qh.buckets.length;i++){ if(seconds<=qh.buckets[i]){ qh.counts[i]+=1; qplaced=true; break; } }
   if(!qplaced) qh.counts[qh.counts.length-1]+=1;
-  h.count += 1;
-  h.sum += seconds;
+  dh.count += 1;
+  dh.sum += seconds;
   let placed = false;
-  for(let i=0;i<h.buckets.length;i++){
-    if(seconds <= h.buckets[i]){ h.counts[i]+=1; placed=true; break; }
+  for(let i=0;i<dh.buckets.length;i++){
+    if(seconds <= dh.buckets[i]){ dh.counts[i]+=1; placed=true; break; }
   }
-  if(!placed) h.counts[h.counts.length-1]+=1; // +Inf idx (last)
+  if(!placed) dh.counts[dh.counts.length-1]+=1; // +Inf idx (last)
 }
 
 function incRequest(method,path,status,durationMs){
@@ -952,6 +1080,7 @@ app.post('/v1/embeddings', async (req, res) => {
     try {
       response = await executeUpstream(()=> client.embeddings.create({ model, input, ...other }));
       adjustAdaptiveOnSuccess(model);
+      incrementDailyUsage(model,false);
     } catch (e){
       const statusCode = e?.status || e?.response?.status || 500;
       if(statusCode === 429){
@@ -971,6 +1100,7 @@ app.post('/v1/embeddings', async (req, res) => {
         code: err?.code || null
       }
     });
+    try { incrementDailyUsage(req?.body?.model,true); } catch(_){}
   }
 });
 
@@ -1028,6 +1158,7 @@ app.post('/v1/completions', async (req, res) => {
         res.write('data: [DONE]\n\n');
         res.end();
         adjustAdaptiveOnSuccess(model);
+  try { incrementDailyUsage(model,false); } catch(_){}
       } catch (err) {
         const statusCode = err?.status || err?.response?.status || 500;
         if (!res.headersSent) {
@@ -1040,6 +1171,7 @@ app.post('/v1/completions', async (req, res) => {
           });
         }
         try { res.end(); } catch (_) {}
+  try { incrementDailyUsage(model,true); } catch(_){}
       }
       return;
     }
@@ -1047,6 +1179,7 @@ app.post('/v1/completions', async (req, res) => {
     try {
       response = await executeUpstream(()=> client.chat.completions.create({ model, messages, ...other }));
       adjustAdaptiveOnSuccess(model);
+  try { incrementDailyUsage(model,false); } catch(_){}
     } catch(e){
       const statusCode = e?.status || e?.response?.status || 500;
       if(statusCode === 429){
@@ -1073,6 +1206,7 @@ app.post('/v1/completions', async (req, res) => {
     res.status(statusCode).json({
       error: { message: err?.message || String(err), type: 'invalid_request_error', param: null, code: err?.code || null },
     });
+  try { incrementDailyUsage(req?.body?.model,true); } catch(_){}
   }
 });
 } // end of non-strict endpoints
@@ -1091,6 +1225,7 @@ if (STRICT_OPENAI_API) {
       try {
         response = await executeUpstream(()=> client.embeddings.create({ model, input, ...other }));
         adjustAdaptiveOnSuccess(model);
+        try { incrementDailyUsage(model,false); } catch(_){}
       } catch(e){
         const statusCode = e?.status || e?.response?.status || 500;
         if(statusCode === 429){
@@ -1103,6 +1238,7 @@ if (STRICT_OPENAI_API) {
     } catch (err){
       const statusCode = err?.status || err?.response?.status || 500;
       res.status(statusCode).json({ error: { message: err?.message || String(err), type: 'invalid_request_error', param: null, code: err?.code || null }});
+      try { incrementDailyUsage(req?.body?.model,true); } catch(_){}
     }
   });
 
@@ -1133,6 +1269,7 @@ if (STRICT_OPENAI_API) {
             adjustAdaptiveOnSuccess(model);
             res.write('data: [DONE]\n\n');
             return res.end();
+            try { incrementDailyUsage(model,false); } catch(_){}
           } catch(streamErr){
             const statusCode = streamErr?.status || streamErr?.response?.status || 500;
             if(statusCode === 429){
@@ -1153,6 +1290,7 @@ if (STRICT_OPENAI_API) {
       try {
         response = await executeUpstream(()=> client.chat.completions.create({ model, messages, ...other }));
         adjustAdaptiveOnSuccess(model);
+  try { incrementDailyUsage(model,false); } catch(_){}
       } catch(e){
         const statusCode = e?.status || e?.response?.status || 500;
         if(statusCode === 429){
@@ -1167,6 +1305,7 @@ if (STRICT_OPENAI_API) {
     } catch (err){
       const statusCode = err?.status || err?.response?.status || 500;
       res.status(statusCode).json({ error: { message: err?.message || String(err), type:'invalid_request_error', param:null, code: err?.code || null }});
+  try { incrementDailyUsage(req?.body?.model,true); } catch(_){}
     }
   });
 }
@@ -1253,14 +1392,31 @@ async function handleChatCompletions(req, res) {
           adjustAdaptiveOn429(model);
           metrics.counters.model_rate_limit_429_total.set(model,(metrics.counters.model_rate_limit_429_total.get(model)||0)+1);
         }
-        return res.status(statusCode).json({
+        // Enhanced error payload for rate limits / permission
+        const is429 = statusCode === 429 || (err?.code === 'RateLimitReached');
+        const headers = err?.headers || err?.response?.headers || {};
+        const retryAfter = Number(headers['retry-after'] || headers['x-ratelimit-timeremaining'] || 0);
+        if(is429 && retryAfter){ res.setHeader('Retry-After', String(retryAfter)); }
+        const limitType = headers['x-ratelimit-type'] || null;
+        const baseMessage = err?.message || String(err);
+        const message = is429 ? `Upstream rate limit reached (${limitType||'unknown'}). Retry after ~${retryAfter}s.` : baseMessage;
+        const errorResponse = {
           error: {
-            message: err?.message || String(err),
-            type: 'invalid_request_error',
-            param: 'stream',
-            code: err?.code || null
+            message,
+            type: is429 ? 'rate_limit_exceeded' : (statusCode===403 ? 'permission_error' : 'invalid_request_error'),
+            param: is429 ? 'model' : 'stream',
+            code: is429 ? 'rate_limit' : (statusCode===403 ? 'permission_denied' : (err?.code || null))
           }
-        });
+        };
+        if(is429){
+          errorResponse.rate_limit = {
+            retry_after_seconds: retryAfter,
+            limit_type: limitType,
+            time_remaining: retryAfter,
+            upstream_code: err?.code || err?.error?.code || null
+          };
+        }
+        return res.status(statusCode).json(errorResponse);
       }
       try { res.end(); } catch (_) {}
     }
@@ -1286,6 +1442,7 @@ async function handleChatCompletions(req, res) {
     const responseTime = Date.now() - startTime;
     limitsHandler.logUsage(model, response.usage, responseTime);
   adjustAdaptiveOnSuccess(model);
+    incrementDailyUsage(model,false);
 
     // Return exact OpenAI response format
     res.json(response);
@@ -1295,22 +1452,37 @@ async function handleChatCompletions(req, res) {
     // Log error usage
     const responseTime = Date.now() - startTime;
     limitsHandler.logUsage(model, { total_tokens: 0, prompt_tokens: 0, completion_tokens: 0 }, responseTime, err);
+  incrementDailyUsage(model,true);
 
     // Format error in OpenAI standard way
-    const errorResponse = {
-      error: {
-        message: err?.message || String(err),
-        type: "invalid_request_error",
-        param: null,
-        code: err?.code || null
-      }
-    };
-
-    // Try to preserve original status code
+    // Enhanced structured error (rate limit / permission / generic)
     const statusCode = err?.status || err?.response?.status || 500;
-    if(statusCode === 429){
+    const headers = err?.headers || err?.response?.headers || {};
+    const is429 = statusCode === 429 || (err?.code === 'RateLimitReached');
+    if(is429){
       adjustAdaptiveOn429(model);
       metrics.counters.model_rate_limit_429_total.set(model,(metrics.counters.model_rate_limit_429_total.get(model)||0)+1);
+    }
+    const retryAfter = is429 ? Number(headers['retry-after'] || headers['x-ratelimit-timeremaining'] || 0) : 0;
+    if(is429 && retryAfter){ res.setHeader('Retry-After', String(retryAfter)); }
+    const limitType = headers['x-ratelimit-type'] || null;
+    const baseMessage = err?.message || String(err);
+    const message = is429 ? `Upstream rate limit reached (${limitType||'unknown'}). Retry after ~${retryAfter}s.` : baseMessage;
+    const errorResponse = {
+      error: {
+        message,
+        type: is429 ? 'rate_limit_exceeded' : (statusCode===403 ? 'permission_error' : 'invalid_request_error'),
+        param: is429 ? 'model' : null,
+        code: is429 ? 'rate_limit' : (statusCode===403 ? 'permission_denied' : (err?.code || null))
+      }
+    };
+    if(is429){
+      errorResponse.rate_limit = {
+        retry_after_seconds: retryAfter,
+        limit_type: limitType,
+        time_remaining: retryAfter,
+        upstream_code: err?.code || err?.error?.code || null
+      };
     }
     res.status(statusCode).json(errorResponse);
   }
@@ -1405,6 +1577,7 @@ async function handleModelsList(req, res) {
     if(ADAPTIVE_RATE_LIMITS){
       const s = adaptiveModelStats.get(m.id);
       if(s){
+        const daily = dailyModelUsage.get(m.id);
         return {
           ...m,
           rate_limit: {
@@ -1413,12 +1586,16 @@ async function handleModelsList(req, res) {
             adaptive_hard_cap: !!s.hardCap,
             adaptive_last429_at: s.last429At || 0,
             adaptive_updated_at: s.updated_at || 0,
+            daily_requests: daily ? daily.count : 0,
+            daily_errors: daily ? daily.errors : 0,
+            hours_until_reset: hoursUntilUtcReset(),
             approximate: true
           }
         };
       }
     }
-    return { ...m, rate_limit: { ...base, approximate: true } };
+    const daily = dailyModelUsage.get(m.id);
+    return { ...m, rate_limit: { ...base, daily_requests: daily?daily.count:0, daily_errors: daily?daily.errors:0, hours_until_reset: hoursUntilUtcReset(), approximate: true } };
   });
 
   res.json({ object: 'list', data, meta: { rate_limit_disclaimer: 'Values are heuristic / approximate; real upstream provider limits may vary.' } });
@@ -1628,6 +1805,18 @@ app.get('/v1/rate-limits/observed', (req,res)=>{
     out[model] = { guess:s.guess, hardCap:s.hardCap, last429At:s.last429At, updated_at:s.updated_at };
   }
   res.json({ adaptive:true, window_seconds: ADAPTIVE_WINDOW_MS/1000, data: out });
+});
+
+// Daily usage snapshot
+app.get('/v1/rate-limits/daily', (req,res)=>{
+  const today = currentUTCDate();
+  const data = {};
+  for(const [model, rec] of dailyModelUsage.entries()){
+    if(rec.date === today){
+      data[model] = { count: rec.count, errors: rec.errors };
+    }
+  }
+  res.json({ date: today, hours_until_reset: hoursUntilUtcReset(), models: data });
 });
 
 const port = process.env.PORT || 3010;
