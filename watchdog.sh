@@ -7,6 +7,7 @@ HEALTH="http://127.0.0.1:${PORT}/health"
 INTERVAL="${INTERVAL:-10}"
 RESTART_DELAY="${RESTART_DELAY:-2}"
 LOG="watchdog.log"
+WATCH_CMD="${WATCH_CMD:-node server.js}"
 MAX_RESTARTS_MIN="${MAX_RESTARTS_MIN:-10}" # throttle restarts per minute
 WINDOW_START=$(date +%s)
 RESTARTS=0
@@ -16,8 +17,9 @@ log(){ echo "[$(date -u +%Y-%m-%dT%H:%M:%SZ)] $*" | tee -a "$LOG"; }
 is_listening(){ lsof -t -nP -iTCP:"$PORT" -sTCP:LISTEN 2>/dev/null | head -n1 || true; }
 
 start_server(){
-  log "Starting server.js on port $PORT"
-  nohup env PORT="$PORT" node server.js >> server.log 2>&1 &
+  log "Starting server (cmd: $WATCH_CMD) on port $PORT"
+  # Run configured start command in background, ensure PORT is passed
+  nohup env PORT="$PORT" sh -c "$WATCH_CMD" >> server.log 2>&1 &
 }
 
 maybe_restart(){

@@ -1,0 +1,11 @@
+groups:
+- name: codespaces-models-alerts
+  rules:
+  - alert: CodespacesModelInstanceNotReady
+    expr: avg_over_time(ready_up[1m]) == 0
+    for: 1m
+    labels:
+      severity: critical
+    annotations:
+      summary: "codespaces-models instance readiness is zero"
+      description: "ready_up == 0 for > 1m on {{ $labels.instance }}" 

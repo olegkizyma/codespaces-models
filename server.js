@@ -6,6 +6,7 @@ import path from "path";
 import { fileURLToPath } from 'url';
 import { ModelLimitsHandler } from "./model-limits-utils.mjs";
 import os from 'os';
+import { createClient as createRedisClient } from 'redis';
 
 // ES modules equivalent of __dirname
 const __filename = fileURLToPath(import.meta.url);
@@ -33,7 +34,7 @@ process.on('unhandledRejection', (reason)=>{
 
 function gracefulShutdown(signal){
   console.log(`[SHUTDOWN] Received ${signal}, closing server...`);
-  try { server?.close(()=>{ console.log('[SHUTDOWN] Closed HTTP server'); process.exit(0); }); } catch(e){ console.error('Error closing server', e); process.exit(1);} 
+  try { if(typeof server !== 'undefined' && server && typeof server.close === 'function'){ server.close(()=>{ console.log('[SHUTDOWN] Closed HTTP server'); process.exit(0); }); } else { console.log('[SHUTDOWN] No HTTP server to close'); process.exit(0); } } catch(e){ console.error('Error closing server', e); process.exit(1);} 
   setTimeout(()=>process.exit(1), 8000).unref();
 }
 ['SIGINT','SIGTERM'].forEach(sig=> process.on(sig, ()=>gracefulShutdown(sig)));
@@ -50,6 +51,7 @@ function gracefulShutdown(signal){
 const RATE_LIMIT_ENABLED = toBool(process.env.RATE_LIMIT_ENABLED ?? '1');
 const RATE_LIMIT_PER_MINUTE = parseInt(process.env.RATE_LIMIT_PER_MINUTE || '30', 10); // дефолт під навантаження 20-30 req/min
 const RATE_LIMIT_BUCKET_LEEWAY = parseInt(process.env.RATE_LIMIT_BUCKET_LEEWAY || '2', 10); // запас
+const ADAPTIVE_RATE_LIMITS = toBool(process.env.ADAPTIVE_RATE_LIMITS ?? '1');
 const CONCURRENCY_ENABLED = toBool(process.env.UPSTREAM_CONCURRENCY_ENABLED ?? '1');
 const UPSTREAM_MAX_CONCURRENT = parseInt(process.env.UPSTREAM_MAX_CONCURRENT || '5', 10);
 const QUEUE_MAX_LENGTH = parseInt(process.env.UPSTREAM_QUEUE_MAX || '50', 10);
@@ -76,6 +78,67 @@ function checkRateLimit(key){
     return { allowed: false, resetMs: entry.windowStart + windowMs - now, used: entry.count };
   }
   return { allowed: true, used: entry.count };
+}
+
+// Redis token-bucket Lua script (returns {allowed, remaining, retry_after_ms})
+const LUA_TOKEN_BUCKET = `
+local key = KEYS[1]
+local capacity = tonumber(ARGV[1])
+local refill_per_ms = tonumber(ARGV[2])
+local now = tonumber(ARGV[3])
+local requested = tonumber(ARGV[4])
+local data = redis.call('HMGET', key, 'tokens','ts')
+local tokens = tonumber(data[1]) or capacity
+local ts = tonumber(data[2]) or now
+local delta = math.max(0, now - ts)
+local refill = delta * refill_per_ms
+tokens = math.min(capacity, tokens + refill)
+local allowed = 0
+local remaining = tokens
+if tokens >= requested then
+  allowed = 1
+  tokens = tokens - requested
+  remaining = tokens
+  redis.call('HMSET', key, 'tokens', tostring(tokens), 'ts', tostring(now))
+  redis.call('PEXPIRE', key, 120000)
+else
+  local need = (requested - tokens)/refill_per_ms
+  redis.call('HMSET', key, 'tokens', tostring(tokens), 'ts', tostring(now))
+  redis.call('PEXPIRE', key, 120000)
+  return {0, remaining, math.ceil(need)}
+end
+return {1, remaining, 0}
+`;
+
+function getAdaptiveGuess(model){
+  if(!ADAPTIVE_RATE_LIMITS) return null;
+  const s = adaptiveModelStats.get(model);
+  return s?.guess || null;
+}
+
+async function checkRateLimitAsync(key, model){
+  if(!RATE_LIMIT_ENABLED) return { allowed: true };
+  if(redisClient && redisAvailable){
+    try{
+      let capacity = RATE_LIMIT_PER_MINUTE;
+      const adaptive = model? getAdaptiveGuess(model) : null;
+      if(adaptive) capacity = Math.min(capacity, adaptive);
+      capacity = capacity + RATE_LIMIT_BUCKET_LEEWAY;
+      const refill_per_ms = (RATE_LIMIT_PER_MINUTE/60)/1000; // tokens per ms
+      const now = Date.now();
+      const requested = 1;
+      const res = await redisClient.eval(LUA_TOKEN_BUCKET, { keys: [ `rate:${key}` ], arguments: [ String(capacity), String(refill_per_ms), String(now), String(requested) ] });
+      // res = [allowed (0/1), remaining, retry_after_ms]
+      const allowed = Number(res[0]) === 1;
+      const remaining = Number(res[1] || 0);
+      const retry = Number(res[2] || 0);
+      return { allowed, used: capacity - remaining, retry_ms: retry };
+    }catch(e){
+      console.error('[REDIS] rate limit eval error', e); // fallback
+      return checkRateLimit(key);
+    }
+  }
+  return checkRateLimit(key);
 }
 
 // Concurrency gate
@@ -123,17 +186,26 @@ async function executeUpstream(task){
 }
 
 // Middleware applying rate limit & queue introspection
-app.use((req,res,next)=>{
+app.use(async (req,res,next)=>{
   // Only guard API routes under /v1/* (exclude /health, static)
   if(!/\/v1\//.test(req.path)) return next();
   const apiKey = getApiKeyFromRequest(req) || 'anon';
   const model = req.body?.model || 'general';
   const rateKey = `${apiKey}:${model}`;
-  const rl = checkRateLimit(rateKey);
+  const rl = await checkRateLimitAsync(rateKey, model);
   if(!rl.allowed){
+    metrics.counters.rate_limit_exceeded_total += 1;
+    // Treat local/global limiter 429 as a signal to reduce adaptive guess (only if a specific model, not 'general')
+    if(model && model !== 'general'){
+      try {
+        adjustAdaptiveOn429(model);
+        metrics.counters.model_rate_limit_429_total.set(model,(metrics.counters.model_rate_limit_429_total.get(model)||0)+1);
+      } catch(_){}
+    }
+    const retryMs = rl.retry_ms || rl.resetMs || 1000;
     return res.status(429).json({
       error: {
-        message: `Rate limit exceeded (limit ~${RATE_LIMIT_PER_MINUTE}/min). Retry after ${Math.ceil(rl.resetMs/1000)}s`,
+        message: `Rate limit exceeded (limit ~${RATE_LIMIT_PER_MINUTE}/min). Retry after ${Math.ceil(retryMs/1000)}s`,
         type: 'rate_limit_exceeded',
         param: 'model',
         code: 'rate_limit'
@@ -142,13 +214,15 @@ app.use((req,res,next)=>{
         window_seconds: 60,
         used: rl.used,
         limit: RATE_LIMIT_PER_MINUTE,
-        reset_ms: rl.resetMs
+        retry_after_ms: retryMs
       }
     });
   }
   // Expose queue / concurrency metrics
   res.setHeader('X-Upstream-Active', String(activeUpstream));
   res.setHeader('X-Upstream-Queue', String(waitQueue.length));
+  // instrument per-path histogram start time
+  req._metrics_start = Date.now();
   next();
 });
 
@@ -159,6 +233,17 @@ app.use((req,res,next)=>{
 const METRICS_ENABLED = toBool(process.env.METRICS_ENABLED ?? '1');
 const METRICS_PATH = process.env.METRICS_PATH || '/metrics';
 
+// Optional Redis for global rate-limiting and readiness check
+const REDIS_URL = process.env.REDIS_URL || process.env.REDIS || null;
+let redisClient = null;
+let redisAvailable = false;
+if (REDIS_URL) {
+  try {
+    redisClient = createRedisClient({ url: REDIS_URL });
+    redisClient.connect().then(()=>{ redisAvailable = true; console.log('[REDIS] connected'); }).catch((e)=>{ console.error('[REDIS] connect error', e); });
+  } catch(e){ console.error('[REDIS] init error', e); }
+}
+
 // Counters / Gauges / Histograms storage
 const metrics = {
   counters: {
@@ -166,16 +251,19 @@ const metrics = {
     http_errors_total: 0,
     rate_limit_exceeded_total: 0,
     tokens_prompt_total: 0,
-    tokens_completion_total: 0
+  tokens_completion_total: 0,
+  model_rate_limit_429_total: new Map() // model -> count
   },
   gauges: {
     upstream_active: () => activeUpstream,
-    upstream_queue: () => waitQueue.length
+  upstream_queue: () => waitQueue.length,
+  ready_up: () => (redisAvailable || !REDIS_URL) ? 1 : 0
   },
   histograms: {
+    // Per-endpoint labelled histograms are approximated by separate histograms per path
     http_request_duration_seconds: {
-      buckets: [0.05,0.1,0.25,0.5,1,2.5,5,10],
-      counts: Array(9).fill(0), // 8 buckets + inf
+      buckets: [0.005,0.01,0.02,0.05,0.1,0.25,0.5,1,2.5,5,10],
+      counts: Array(12).fill(0), // 11 buckets + inf
       sum: 0,
       count: 0
     },
@@ -188,6 +276,112 @@ const metrics = {
   },
   lastScrape: 0
 };
+
+// path-specific histograms
+metrics.pathHistograms = new Map();
+
+// ================= Adaptive Rate Limits ==================
+const adaptiveModelStats = new Map(); // model -> {guess, success, r429, windowStart, lastUp, lastDown, hardCap, last429At}
+const ADAPTIVE_WINDOW_MS = 60_000;
+const ADAPTIVE_MIN_GUESS = 1;
+const ADAPTIVE_MAX_GUESS = 200;
+const ADAPTIVE_INCREASE_FACTOR = 1.2;
+const ADAPTIVE_DECREASE_FACTOR = 0.6;
+const ADAPTIVE_UP_COOLDOWN_MS = 5*60_000;
+const ADAPTIVE_DOWN_COOLDOWN_MS = 30_000;
+const ADAPTIVE_HARDCAP_THRESHOLD = 2; // consecutive 429 at low traffic -> hard cap
+let ADAPTIVE_PERSIST_PATH = path.join(process.cwd(), 'observed-rate-limits.json');
+
+function loadAdaptiveState(){
+  if(!ADAPTIVE_RATE_LIMITS) return;
+  try{
+    const fs = require('fs');
+    if(fs.existsSync(ADAPTIVE_PERSIST_PATH)){
+      const raw = JSON.parse(fs.readFileSync(ADAPTIVE_PERSIST_PATH,'utf-8'));
+      const now = Date.now();
+      for(const [model, rec] of Object.entries(raw||{})){
+        if(now - (rec.updated_at||0) < 24*60*60*1000){
+          adaptiveModelStats.set(model, { ...rec, windowStart: now, success:0, r429:0 });
+        }
+      }
+      console.log('[ADAPTIVE] loaded state for', adaptiveModelStats.size, 'models');
+    }
+  }catch(e){ console.warn('[ADAPTIVE] load error', e.message); }
+}
+
+function persistAdaptiveState(){
+  if(!ADAPTIVE_RATE_LIMITS) return;
+  try{
+    const fs = require('fs');
+    const out = {};
+    for(const [m,s] of adaptiveModelStats.entries()){
+      out[m] = { guess:s.guess, hardCap: !!s.hardCap, last429At: s.last429At||0, updated_at: s.updated_at||Date.now() };
+    }
+    fs.writeFileSync(ADAPTIVE_PERSIST_PATH, JSON.stringify(out,null,2));
+  }catch(e){ console.warn('[ADAPTIVE] persist error', e.message); }
+}
+
+function getOrInitAdaptive(model, base){
+  let s = adaptiveModelStats.get(model);
+  if(!s){
+    s = { guess: base || RATE_LIMIT_PER_MINUTE, success:0, r429:0, windowStart: Date.now(), lastUp:0, lastDown:0, hardCap:false, last429At:0, updated_at: Date.now() };
+    adaptiveModelStats.set(model,s);
+  }
+  return s;
+}
+
+function adjustAdaptiveOnSuccess(model){
+  if(!ADAPTIVE_RATE_LIMITS) return;
+  const s = getOrInitAdaptive(model);
+  const now = Date.now();
+  if(now - s.windowStart > ADAPTIVE_WINDOW_MS){
+    // window rollover
+    s.success = 0; s.r429 = 0; s.windowStart = now;
+  }
+  s.success++;
+  const utilization = s.success / Math.max(1, s.guess);
+  if(s.r429 === 0 && utilization >= 0.8 && (now - s.lastUp) > ADAPTIVE_UP_COOLDOWN_MS && !s.hardCap){
+    const newGuess = Math.min(ADAPTIVE_MAX_GUESS, Math.ceil(s.guess * ADAPTIVE_INCREASE_FACTOR));
+    if(newGuess > s.guess){ s.guess = newGuess; s.lastUp = now; s.updated_at = now; }
+  }
+}
+
+function adjustAdaptiveOn429(model){
+  if(!ADAPTIVE_RATE_LIMITS) return;
+  const s = getOrInitAdaptive(model);
+  const now = Date.now();
+  if(now - s.windowStart > ADAPTIVE_WINDOW_MS){ s.success=0; s.r429=0; s.windowStart=now; }
+  s.r429++; s.last429At = now;
+  if(s.r429 >= ADAPTIVE_HARDCAP_THRESHOLD && s.success <= 2){ s.hardCap = true; }
+  if((now - s.lastDown) > ADAPTIVE_DOWN_COOLDOWN_MS){
+    const factor = s.hardCap ? 0.5 : ADAPTIVE_DECREASE_FACTOR;
+    const newGuess = Math.max(ADAPTIVE_MIN_GUESS, Math.floor(s.guess * factor));
+    if(newGuess < s.guess){ s.guess = newGuess; s.lastDown = now; s.updated_at = now; }
+  }
+}
+
+// Periodic persistence
+if(ADAPTIVE_RATE_LIMITS){
+  loadAdaptiveState();
+  setInterval(()=>{ try{ persistAdaptiveState(); }catch(_){} }, 10*60_000).unref?.();
+}
+
+function ensurePathHistogram(p){
+  if(!metrics.pathHistograms.has(p)){
+    const buckets = [...metrics.histograms.http_request_duration_seconds.buckets];
+    metrics.pathHistograms.set(p, { buckets, counts: Array(buckets.length+1).fill(0), sum: 0, count: 0 });
+  }
+  return metrics.pathHistograms.get(p);
+}
+
+function observeDurationForPath(p, seconds){
+  try{
+    const h = ensurePathHistogram(p);
+    h.count += 1; h.sum += seconds;
+    let placed=false; for(let i=0;i<h.buckets.length;i++){ if(seconds<=h.buckets[i]){ h.counts[i]+=1; placed=true; break; } }
+    if(!placed) h.counts[h.counts.length-1]+=1;
+  }catch(e){/* noop */}
+}
 
 function observeDuration(seconds){
   const dh = metrics.histograms.http_request_duration_seconds;
@@ -225,11 +419,27 @@ if (METRICS_ENABLED) {
     if(req.path === METRICS_PATH) return next();
     const start = Date.now();
     res.once('finish',()=>{
-      try { incRequest(req.method, req.route?.path || req.path, res.statusCode, Date.now()-start); } catch(_){}
-    });
+      try {
+        const durationMs = Date.now()-start;
+        incRequest(req.method, req.route?.path || req.path, res.statusCode, durationMs);
+        // per-path histogram (seconds)
+        try{ observeDurationForPath(req.route?.path || req.path, durationMs/1000); }catch(_){}
+      } catch(_){}}
+    );
+    // Per-endpoint histogram update wrapper (recorded inside incRequest currently for global histogram)
     next();
   });
 }
+
+// Readiness endpoint — fast checks of dependencies
+app.get('/ready', async (req,res)=>{
+  const details = { redis: REDIS_URL? (redisAvailable? 'ok' : 'down') : 'disabled', queue_len: waitQueue.length, upstream_active: activeUpstream };
+  const ready = (!REDIS_URL || redisAvailable) && waitQueue.length < Math.max(QUEUE_MAX_LENGTH*0.9, 1);
+  // Update ready_up gauge
+  metrics.gauges.ready_up = () => ready? 1 : 0;
+  if(ready) return res.json({ ready: true, details, timestamp: new Date().toISOString() });
+  return res.status(503).json({ ready: false, details, timestamp: new Date().toISOString() });
+});
 
 function formatPrometheus(){
   const lines = [];
@@ -245,6 +455,20 @@ function formatPrometheus(){
   lines.push('# HELP rate_limit_exceeded_total Number of rate limited requests');
   lines.push('# TYPE rate_limit_exceeded_total counter');
   lines.push(`rate_limit_exceeded_total ${metrics.counters.rate_limit_exceeded_total}`);
+  // Adaptive per-model 429 counters
+  lines.push('# HELP model_rate_limit_429_total Upstream 429 responses per model');
+  lines.push('# TYPE model_rate_limit_429_total counter');
+  for(const [model,val] of metrics.counters.model_rate_limit_429_total.entries()){
+    lines.push(`model_rate_limit_429_total{model="${model}"} ${val}`);
+  }
+  // Adaptive guesses
+  if(ADAPTIVE_RATE_LIMITS){
+    lines.push('# HELP model_rate_limit_guess Adaptive rate limit guess per model (requests/min)');
+    lines.push('# TYPE model_rate_limit_guess gauge');
+    for(const [model,s] of adaptiveModelStats.entries()){
+      lines.push(`model_rate_limit_guess{model="${model}",hard_cap="${s.hardCap?1:0}"} ${s.guess}`);
+    }
+  }
   lines.push('# HELP tokens_prompt_total Total prompt tokens (approx)');
   lines.push('# TYPE tokens_prompt_total counter');
   lines.push(`tokens_prompt_total ${metrics.counters.tokens_prompt_total}`);
@@ -257,6 +481,9 @@ function formatPrometheus(){
   lines.push('# HELP upstream_queue_length Current queued upstream operations');
   lines.push('# TYPE upstream_queue_length gauge');
   lines.push(`upstream_queue_length ${metrics.gauges.upstream_queue()}`);
+  lines.push('# HELP ready_up Readiness gauge (1 = ready, 0 = not ready)');
+  lines.push('# TYPE ready_up gauge');
+  lines.push(`ready_up ${metrics.gauges.ready_up()}`);
   // Histogram
   const h = metrics.histograms.http_request_duration_seconds;
   lines.push('# HELP http_request_duration_seconds Request duration seconds');
@@ -316,6 +543,23 @@ function formatPrometheus(){
   lines.push('# HELP nodejs_active_handles Active libuv handles');
   lines.push('# TYPE nodejs_active_handles gauge');
   lines.push(`nodejs_active_handles ${(process._getActiveHandles?.().length)||0}`);
+  // Per-path histograms: emit per-path histogram metrics with label path
+  if(metrics.pathHistograms.size){
+    lines.push('# HELP http_request_duration_seconds_bucket_per_path HTTP request duration buckets by path');
+    lines.push('# TYPE http_request_duration_seconds_bucket_per_path histogram');
+    for(const [p,h] of metrics.pathHistograms.entries()){
+      const pathLabel = `path="${p.replace(/"/g,'\\"') }"`;
+      let cum = 0;
+      for(let i=0;i<h.buckets.length;i++){
+        cum += h.counts[i];
+        lines.push(`http_request_duration_seconds_bucket_per_path{${pathLabel},le="${h.buckets[i]}"} ${cum}`);
+      }
+      cum += h.counts[h.counts.length-1];
+      lines.push(`http_request_duration_seconds_bucket_per_path{${pathLabel},le="+Inf"} ${cum}`);
+      lines.push(`http_request_duration_seconds_sum_per_path{${pathLabel}} ${h.sum}`);
+      lines.push(`http_request_duration_seconds_count_per_path{${pathLabel}} ${h.count}`);
+    }
+  }
   lines.push('# EOF');
   return lines.join('\n')+'\n';
 }
@@ -750,7 +994,18 @@ app.post('/v1/embeddings', async (req, res) => {
         error: { message: 'you must provide model and input', type: 'invalid_request_error', param: null, code: null }
       });
     }
-  const response = await executeUpstream(()=> client.embeddings.create({ model, input, ...other }));
+    let response;
+    try {
+      response = await executeUpstream(()=> client.embeddings.create({ model, input, ...other }));
+      adjustAdaptiveOnSuccess(model);
+    } catch (e){
+      const statusCode = e?.status || e?.response?.status || 500;
+      if(statusCode === 429){
+        adjustAdaptiveOn429(model);
+        metrics.counters.model_rate_limit_429_total.set(model,(metrics.counters.model_rate_limit_429_total.get(model)||0)+1);
+      }
+      throw e;
+    }
     res.json(response);
   } catch (err) {
     const statusCode = err?.status || err?.response?.status || 500;
@@ -818,9 +1073,14 @@ app.post('/v1/completions', async (req, res) => {
         }
         res.write('data: [DONE]\n\n');
         res.end();
+        adjustAdaptiveOnSuccess(model);
       } catch (err) {
         const statusCode = err?.status || err?.response?.status || 500;
         if (!res.headersSent) {
+          if(statusCode === 429){
+            adjustAdaptiveOn429(model);
+            metrics.counters.model_rate_limit_429_total.set(model,(metrics.counters.model_rate_limit_429_total.get(model)||0)+1);
+          }
           return res.status(statusCode).json({
             error: { message: err?.message || String(err), type: 'invalid_request_error', param: null, code: err?.code || null },
           });
@@ -829,8 +1089,18 @@ app.post('/v1/completions', async (req, res) => {
       }
       return;
     }
-
-  const response = await executeUpstream(()=> client.chat.completions.create({ model, messages, ...other }));
+    let response;
+    try {
+      response = await executeUpstream(()=> client.chat.completions.create({ model, messages, ...other }));
+      adjustAdaptiveOnSuccess(model);
+    } catch(e){
+      const statusCode = e?.status || e?.response?.status || 500;
+      if(statusCode === 429){
+        adjustAdaptiveOn429(model);
+        metrics.counters.model_rate_limit_429_total.set(model,(metrics.counters.model_rate_limit_429_total.get(model)||0)+1);
+      }
+      throw e;
+    }
     const text = response?.choices?.[0]?.message?.content || '';
     const finish = response?.choices?.[0]?.finish_reason || 'stop';
     const payload = {
@@ -863,7 +1133,18 @@ if (STRICT_OPENAI_API) {
       if (!model || typeof input === 'undefined') {
         return res.status(400).json({ error: { message: 'you must provide model and input', type: 'invalid_request_error', param: null, code: null }});
       }
-      const response = await executeUpstream(()=> client.embeddings.create({ model, input, ...other }));
+      let response;
+      try {
+        response = await executeUpstream(()=> client.embeddings.create({ model, input, ...other }));
+        adjustAdaptiveOnSuccess(model);
+      } catch(e){
+        const statusCode = e?.status || e?.response?.status || 500;
+        if(statusCode === 429){
+          adjustAdaptiveOn429(model);
+          metrics.counters.model_rate_limit_429_total.set(model,(metrics.counters.model_rate_limit_429_total.get(model)||0)+1);
+        }
+        throw e;
+      }
       res.json(response);
     } catch (err){
       const statusCode = err?.status || err?.response?.status || 500;
@@ -887,15 +1168,25 @@ if (STRICT_OPENAI_API) {
         res.setHeader('Connection', 'keep-alive');
         res.flushHeaders?.();
         try {
-          const responseStream = await client.chat.completions.create({ model, messages, stream: true, ...other });
-          for await (const chunk of responseStream) {
-            const delta = chunk?.choices?.[0]?.delta?.content || '';
-            const done = chunk?.choices?.[0]?.finish_reason || null;
-            const payload = { id: chunk?.id, object:'text_completion', created: Math.floor(Date.now()/1000), model, choices:[{ text: delta, index:0, logprobs:null, finish_reason: done }]};
-            res.write(`data: ${JSON.stringify(payload)}\n\n`);
+          try {
+            const responseStream = await client.chat.completions.create({ model, messages, stream: true, ...other });
+            for await (const chunk of responseStream) {
+              const delta = chunk?.choices?.[0]?.delta?.content || '';
+              const done = chunk?.choices?.[0]?.finish_reason || null;
+              const payload = { id: chunk?.id, object:'text_completion', created: Math.floor(Date.now()/1000), model, choices:[{ text: delta, index:0, logprobs:null, finish_reason: done }]};
+              res.write(`data: ${JSON.stringify(payload)}\n\n`);
+            }
+            adjustAdaptiveOnSuccess(model);
+            res.write('data: [DONE]\n\n');
+            return res.end();
+          } catch(streamErr){
+            const statusCode = streamErr?.status || streamErr?.response?.status || 500;
+            if(statusCode === 429){
+              adjustAdaptiveOn429(model);
+              metrics.counters.model_rate_limit_429_total.set(model,(metrics.counters.model_rate_limit_429_total.get(model)||0)+1);
+            }
+            throw streamErr;
           }
-          res.write('data: [DONE]\n\n');
-          return res.end();
         } catch (err){
           if(!res.headersSent){
             const statusCode = err?.status || err?.response?.status || 500;
@@ -904,7 +1195,18 @@ if (STRICT_OPENAI_API) {
           return res.end();
         }
       }
-      const response = await executeUpstream(()=> client.chat.completions.create({ model, messages, ...other }));
+      let response;
+      try {
+        response = await executeUpstream(()=> client.chat.completions.create({ model, messages, ...other }));
+        adjustAdaptiveOnSuccess(model);
+      } catch(e){
+        const statusCode = e?.status || e?.response?.status || 500;
+        if(statusCode === 429){
+          adjustAdaptiveOn429(model);
+          metrics.counters.model_rate_limit_429_total.set(model,(metrics.counters.model_rate_limit_429_total.get(model)||0)+1);
+        }
+        throw e;
+      }
       const text = response?.choices?.[0]?.message?.content || '';
       const finish = response?.choices?.[0]?.finish_reason || 'stop';
       return res.json({ id: response?.id, object:'text_completion', created: Math.floor(Date.now()/1000), model, choices:[{ text, index:0, logprobs:null, finish_reason: finish }], usage: response?.usage });
@@ -986,12 +1288,17 @@ async function handleChatCompletions(req, res) {
         res.write('data: [DONE]\n\n');
         res.end();
         metrics.counters.tokens_completion_total += tokensApprox;
+        adjustAdaptiveOnSuccess(model);
       } finally { release(); }
     } catch (err) {
       console.error('Streaming error', err);
       // If streaming setup failed before headers were committed
       if (!res.headersSent) {
         const statusCode = err?.status || err?.response?.status || 500;
+        if(statusCode === 429){
+          adjustAdaptiveOn429(model);
+          metrics.counters.model_rate_limit_429_total.set(model,(metrics.counters.model_rate_limit_429_total.get(model)||0)+1);
+        }
         return res.status(statusCode).json({
           error: {
             message: err?.message || String(err),
@@ -1024,6 +1331,7 @@ async function handleChatCompletions(req, res) {
     // Log successful usage
     const responseTime = Date.now() - startTime;
     limitsHandler.logUsage(model, response.usage, responseTime);
+  adjustAdaptiveOnSuccess(model);
 
     // Return exact OpenAI response format
     res.json(response);
@@ -1046,6 +1354,10 @@ async function handleChatCompletions(req, res) {
 
     // Try to preserve original status code
     const statusCode = err?.status || err?.response?.status || 500;
+    if(statusCode === 429){
+      adjustAdaptiveOn429(model);
+      metrics.counters.model_rate_limit_429_total.set(model,(metrics.counters.model_rate_limit_429_total.get(model)||0)+1);
+    }
     res.status(statusCode).json(errorResponse);
   }
 }
@@ -1058,6 +1370,87 @@ if (!STRICT_OPENAI_API) {
 // OpenAI Models endpoint - list available models
 async function handleModelsList(req, res) {
   console.log('[OPENAI-STD] Models list request');
+
+  // Approximate / observed or assumed upstream rate limits (per minute) for models.
+  // NOTE: These are heuristic / placeholder values; real limits depend on provider & account.
+  const MODEL_RATE_LIMITS = {
+    // AI21 Jamba (large context / heavier)
+    'ai21-labs/ai21-jamba-1.5-large': { per_minute: 8, window_seconds: 60, tier: 'large', note: 'Large context / higher cost' },
+    'ai21-labs/ai21-jamba-1.5-mini': { per_minute: 25, window_seconds: 60, tier: 'mini' },
+
+    // Cohere
+    'cohere/cohere-command-a': { per_minute: 15, window_seconds: 60, tier: 'general' },
+    'cohere/cohere-command-r-08-2024': { per_minute: 10, window_seconds: 60, tier: 'reasoning' },
+    'cohere/cohere-command-r-plus-08-2024': { per_minute: 6, window_seconds: 60, tier: 'reasoning-premium' },
+    'cohere/cohere-embed-v3-english': { per_minute: 70, window_seconds: 60, tier: 'embedding' },
+    'cohere/cohere-embed-v3-multilingual': { per_minute: 60, window_seconds: 60, tier: 'embedding' },
+
+    // Core42
+    'core42/jais-30b-chat': { per_minute: 6, window_seconds: 60, tier: '30b', note: 'Bigger model' },
+
+    // DeepSeek (strict upstream limits observed)
+    'deepseek/deepseek-r1': { per_minute: 1, window_seconds: 60, upstream: true, tier: 'reasoning', note: 'Observed upstream low limit' },
+    'deepseek/deepseek-r1-0528': { per_minute: 1, window_seconds: 60, upstream: true, tier: 'reasoning' },
+    'deepseek/deepseek-v3-0324': { per_minute: 1, window_seconds: 60, upstream: true, tier: 'general', note: 'Observed 1 req/min (429 beyond)' },
+
+    // Meta Llama vision / instruct / next gen
+    'meta/llama-3.2-11b-vision-instruct': { per_minute: 6, window_seconds: 60, tier: 'vision' },
+    'meta/llama-3.2-90b-vision-instruct': { per_minute: 3, window_seconds: 60, tier: 'vision-large' },
+    'meta/llama-3.3-70b-instruct': { per_minute: 4, window_seconds: 60, tier: '70b' },
+    'meta/llama-4-maverick-17b-128e-instruct-fp8': { per_minute: 5, window_seconds: 60, tier: '17b' },
+    'meta/llama-4-scout-17b-16e-instruct': { per_minute: 5, window_seconds: 60, tier: '17b' },
+    'meta/meta-llama-3.1-405b-instruct': { per_minute: 2, window_seconds: 60, tier: '405b', note: 'Very large (heuristic)' },
+    'meta/meta-llama-3.1-8b-instruct': { per_minute: 30, window_seconds: 60, tier: '8b' },
+
+    // Microsoft Phi / MAI
+    'microsoft/mai-ds-r1': { per_minute: 5, window_seconds: 60, tier: 'reasoning' },
+    'microsoft/phi-3-medium-128k-instruct': { per_minute: 15, window_seconds: 60, tier: 'medium-128k' },
+    'microsoft/phi-3-medium-4k-instruct': { per_minute: 18, window_seconds: 60, tier: 'medium-4k' },
+    'microsoft/phi-3-mini-128k-instruct': { per_minute: 35, window_seconds: 60, tier: 'mini-128k' },
+    'microsoft/phi-3-mini-4k-instruct': { per_minute: 40, window_seconds: 60, tier: 'mini-4k' },
+    'microsoft/phi-3-small-128k-instruct': { per_minute: 28, window_seconds: 60, tier: 'small-128k' },
+    'microsoft/phi-3-small-8k-instruct': { per_minute: 30, window_seconds: 60, tier: 'small-8k' },
+    'microsoft/phi-3.5-mini-instruct': { per_minute: 38, window_seconds: 60, tier: '3.5-mini' },
+    'microsoft/phi-3.5-moe-instruct': { per_minute: 15, window_seconds: 60, tier: '3.5-moe' },
+    'microsoft/phi-3.5-vision-instruct': { per_minute: 12, window_seconds: 60, tier: '3.5-vision' },
+    'microsoft/phi-4': { per_minute: 8, window_seconds: 60, tier: '4' },
+    'microsoft/phi-4-mini-instruct': { per_minute: 22, window_seconds: 60, tier: '4-mini' },
+    'microsoft/phi-4-mini-reasoning': { per_minute: 10, window_seconds: 60, tier: '4-mini-reasoning' },
+    'microsoft/phi-4-multimodal-instruct': { per_minute: 10, window_seconds: 60, tier: '4-multimodal' },
+    'microsoft/phi-4-reasoning': { per_minute: 6, window_seconds: 60, tier: '4-reasoning' },
+
+    // Mistral family
+    'mistral-ai/codestral-2501': { per_minute: 8, window_seconds: 60, tier: 'coding-large' },
+    'mistral-ai/ministral-3b': { per_minute: 45, window_seconds: 60, tier: '3b' },
+    'mistral-ai/mistral-large-2411': { per_minute: 6, window_seconds: 60, tier: 'large' },
+    'mistral-ai/mistral-medium-2505': { per_minute: 18, window_seconds: 60, tier: 'medium' },
+    'mistral-ai/mistral-nemo': { per_minute: 14, window_seconds: 60, tier: 'nemo' },
+    'mistral-ai/mistral-small-2503': { per_minute: 40, window_seconds: 60, tier: 'small' },
+
+    // OpenAI families (heuristic values approximated; adjust per acct)
+    'openai/gpt-4.1': { per_minute: 12, window_seconds: 60, tier: 'gpt-4.x' },
+    'openai/gpt-4.1-mini': { per_minute: 30, window_seconds: 60, tier: 'gpt-4.x-mini' },
+    'openai/gpt-4.1-nano': { per_minute: 45, window_seconds: 60, tier: 'gpt-4.x-nano' },
+    'openai/gpt-4o': { per_minute: 18, window_seconds: 60, tier: 'gpt-4o' },
+    'openai/gpt-4o-mini': { per_minute: 35, window_seconds: 60, tier: 'gpt-4o-mini' },
+    'openai/gpt-5': { per_minute: 5, window_seconds: 60, tier: 'gpt-5', note: 'Early / low throughput (heuristic)' },
+    'openai/gpt-5-chat': { per_minute: 5, window_seconds: 60, tier: 'gpt-5' },
+    'openai/gpt-5-mini': { per_minute: 12, window_seconds: 60, tier: 'gpt-5-mini' },
+    'openai/gpt-5-nano': { per_minute: 20, window_seconds: 60, tier: 'gpt-5-nano' },
+    'openai/o1': { per_minute: 6, window_seconds: 60, tier: 'o1' },
+    'openai/o1-mini': { per_minute: 16, window_seconds: 60, tier: 'o1-mini' },
+    'openai/o1-preview': { per_minute: 4, window_seconds: 60, tier: 'o1-preview', note: 'Preview reduced limit' },
+    'openai/o3': { per_minute: 5, window_seconds: 60, tier: 'o3' },
+    'openai/o3-mini': { per_minute: 14, window_seconds: 60, tier: 'o3-mini' },
+    'openai/o4-mini': { per_minute: 20, window_seconds: 60, tier: 'o4-mini' },
+    'openai/text-embedding-3-large': { per_minute: 30, window_seconds: 60, tier: 'embedding-large' },
+    'openai/text-embedding-3-small': { per_minute: 70, window_seconds: 60, tier: 'embedding-small' },
+
+    // XAI
+    'xai/grok-3': { per_minute: 6, window_seconds: 60, tier: 'grok' },
+    'xai/grok-3-mini': { per_minute: 18, window_seconds: 60, tier: 'grok-mini' }
+  };
+  const DEFAULT_MODEL_RATE_LIMIT = { per_minute: 25, window_seconds: 60, tier: 'default' };
 
   const models = [
     // Всі 58 моделей з GitHub Models API
@@ -1121,10 +1514,28 @@ async function handleModelsList(req, res) {
     { id: "xai/grok-3-mini", object: "model", created: 1677610602, owned_by: "xai" }
   ];
 
-  res.json({
-    object: "list",
-    data: models
+  const data = models.map(m => {
+    const base = MODEL_RATE_LIMITS[m.id] || DEFAULT_MODEL_RATE_LIMIT;
+    if(ADAPTIVE_RATE_LIMITS){
+      const s = adaptiveModelStats.get(m.id);
+      if(s){
+        return {
+          ...m,
+          rate_limit: {
+            ...base,
+            adaptive_guess: s.guess,
+            adaptive_hard_cap: !!s.hardCap,
+            adaptive_last429_at: s.last429At || 0,
+            adaptive_updated_at: s.updated_at || 0,
+            approximate: true
+          }
+        };
+      }
+    }
+    return { ...m, rate_limit: { ...base, approximate: true } };
   });
+
+  res.json({ object: 'list', data, meta: { rate_limit_disclaimer: 'Values are heuristic / approximate; real upstream provider limits may vary.' } });
 }
 
 // Alias for compatibility (only in non-strict mode)
@@ -1324,6 +1735,14 @@ curl -s -X POST "http://localhost:3010/v1/chat/completions" \\
 // Standard OpenAI endpoints always available (including in strict mode)
 app.post('/v1/chat/completions', handleChatCompletions);
 app.get('/v1/models', handleModelsList);
+app.get('/v1/rate-limits/observed', (req,res)=>{
+  if(!ADAPTIVE_RATE_LIMITS) return res.json({ adaptive:false });
+  const out = {};
+  for(const [model,s] of adaptiveModelStats.entries()){
+    out[model] = { guess:s.guess, hardCap:s.hardCap, last429At:s.last429At, updated_at:s.updated_at };
+  }
+  res.json({ adaptive:true, window_seconds: ADAPTIVE_WINDOW_MS/1000, data: out });
+});
 
 const port = process.env.PORT || 3010;
 app.listen(port, () => console.log(`OpenAI proxy listening on ${port}`));
