@@ -9,7 +9,7 @@ module.exports = {
       watch: false,
       env: {
         NODE_ENV: "production",
-        // set defaults here if you like; override with real env or .env
+        PORT: "4000",
         STRICT_OPENAI_API: "true",
         METRICS_ENABLED: "1",
         RATE_LIMIT_ENABLED: "1",
