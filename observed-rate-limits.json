@@ -1,14 +1,349 @@
-{
-  "openai/gpt-4o-mini": {
+[
+  {
+    "model": "openai/gpt-4o-mini",
     "guess": 30,
     "hardCap": false,
-    "last429At": 0,
-    "updated_at": 1757251759964
+    "last429At": 1757809459085,
+    "updated_at": 1757251759964,
+    "success": 117,
+    "r429": 9
   },
-  "deepseek/deepseek-v3-0324": {
+  {
+    "model": "deepseek/deepseek-v3-0324",
     "guess": 18,
     "hardCap": false,
     "last429At": 1757251773662,
-    "updated_at": 1757251773662
+    "updated_at": 1757251773662,
+    "success": 3
+  },
+  {
+    "model": "ai21-labs/ai21-jamba-1.5-large",
+    "guess": 200,
+    "success": 1,
+    "r429": 0,
+    "windowStart": 1757799471402,
+    "lastUp": 1757784247753,
+    "lastDown": 0,
+    "hardCap": false,
+    "last429At": 0
+  },
+  {
+    "model": "meta/llama-3.2-11b-vision-instruct",
+    "guess": 62,
+    "success": 1,
+    "r429": 0,
+    "windowStart": 1757718637868,
+    "lastUp": 1757718637868,
+    "lastDown": 0,
+    "hardCap": false,
+    "last429At": 0
+  },
+  {
+    "model": "openai/gpt-4o",
+    "guess": 200,
+    "success": 1,
+    "r429": 0,
+    "windowStart": 1757809273132,
+    "lastUp": 1757798416184,
+    "lastDown": 1757777856338,
+    "hardCap": false,
+    "last429At": 1757777856338
+  },
+  {
+    "model": "microsoft/phi-3.5-mini-instruct",
+    "guess": 18,
+    "success": 0,
+    "r429": 2,
+    "windowStart": 1757777808559,
+    "lastUp": 0,
+    "lastDown": 1757777808555,
+    "hardCap": false,
+    "last429At": 1757777810915
+  },
+  {
+    "model": "openai/gpt-4.1",
+    "guess": 200,
+    "success": 1,
+    "r429": 0,
+    "windowStart": 1757806900356,
+    "lastUp": 1757792940786,
+    "lastDown": 0,
+    "hardCap": false,
+    "last429At": 0
+  },
+  {
+    "model": "openai/gpt-4.1-mini",
+    "guess": 200,
+    "success": 1,
+    "r429": 0,
+    "windowStart": 1757806966242,
+    "lastUp": 1757792996288,
+    "lastDown": 0,
+    "hardCap": false,
+    "last429At": 0
+  },
+  {
+    "model": "openai/gpt-4.1-nano",
+    "guess": 200,
+    "success": 1,
+    "r429": 0,
+    "windowStart": 1757806970949,
+    "lastUp": 1757790650901,
+    "lastDown": 0,
+    "hardCap": false,
+    "last429At": 0
+  },
+  {
+    "model": "cohere/cohere-command-r-plus-08-2024",
+    "guess": 200,
+    "success": 1,
+    "r429": 0,
+    "windowStart": 1757806483412,
+    "lastUp": 1757790262804,
+    "lastDown": 0,
+    "hardCap": false,
+    "last429At": 0
+  },
+  {
+    "model": "deepseek/deepseek-r1",
+    "guess": 1,
+    "success": 1,
+    "r429": 0,
+    "windowStart": 1757806683661,
+    "lastUp": 1757785466651,
+    "lastDown": 1757785930401,
+    "hardCap": false,
+    "last429At": 1757793284749
+  },
+  {
+    "model": "ai21-labs/ai21-jamba-1.5-mini",
+    "guess": 200,
+    "success": 1,
+    "r429": 0,
+    "windowStart": 1757807123334,
+    "lastUp": 1757797863692,
+    "lastDown": 0,
+    "hardCap": false,
+    "last429At": 0
+  },
+  {
+    "model": "cohere/cohere-command-a",
+    "guess": 62,
+    "success": 0,
+    "r429": 0,
+    "windowStart": 1757806407753,
+    "lastUp": 1757806407753,
+    "lastDown": 0,
+    "hardCap": false,
+    "last429At": 0
+  },
+  {
+    "model": "cohere/cohere-command-r-08-2024",
+    "guess": 62,
+    "success": 0,
+    "r429": 0,
+    "windowStart": 1757806473969,
+    "lastUp": 1757806473969,
+    "lastDown": 0,
+    "hardCap": false,
+    "last429At": 0
+  },
+  {
+    "model": "core42/jais-30b-chat",
+    "guess": 62,
+    "success": 0,
+    "r429": 0,
+    "windowStart": 1757806508095,
+    "lastUp": 1757806508095,
+    "lastDown": 0,
+    "hardCap": false,
+    "last429At": 0
+  },
+  {
+    "model": "deepseek/deepseek-r1-0528",
+    "guess": 62,
+    "success": 0,
+    "r429": 0,
+    "windowStart": 1757806628912,
+    "lastUp": 1757806628912,
+    "lastDown": 0,
+    "hardCap": false,
+    "last429At": 0
+  },
+  {
+    "model": "meta/llama-4-maverick-17b-128e-instruct-fp8",
+    "guess": 62,
+    "success": 0,
+    "r429": 0,
+    "windowStart": 1757806643239,
+    "lastUp": 1757806643239,
+    "lastDown": 0,
+    "hardCap": false,
+    "last429At": 0
+  },
+  {
+    "model": "meta/llama-4-scout-17b-16e-instruct",
+    "guess": 52,
+    "success": 0,
+    "r429": 0,
+    "windowStart": 1757806642138,
+    "lastUp": 1757806642138,
+    "lastDown": 0,
+    "hardCap": false,
+    "last429At": 0
+  },
+  {
+    "model": "meta/meta-llama-3.1-8b-instruct",
+    "guess": 52,
+    "success": 0,
+    "r429": 0,
+    "windowStart": 1757806647444,
+    "lastUp": 1757806647444,
+    "lastDown": 0,
+    "hardCap": false,
+    "last429At": 0
+  },
+  {
+    "model": "microsoft/mai-ds-r1",
+    "guess": 43,
+    "success": 0,
+    "r429": 0,
+    "windowStart": 1757806650862,
+    "lastUp": 1757806650862,
+    "lastDown": 0,
+    "hardCap": false,
+    "last429At": 0
+  },
+  {
+    "model": "microsoft/phi-4",
+    "guess": 36,
+    "success": 0,
+    "r429": 0,
+    "windowStart": 1757806679289,
+    "lastUp": 1757806679289,
+    "lastDown": 0,
+    "hardCap": false,
+    "last429At": 0
+  },
+  {
+    "model": "microsoft/phi-4-mini-instruct",
+    "guess": 36,
+    "success": 0,
+    "r429": 0,
+    "windowStart": 1757806682993,
+    "lastUp": 1757806682993,
+    "lastDown": 0,
+    "hardCap": false,
+    "last429At": 0
+  },
+  {
+    "model": "microsoft/phi-4-mini-reasoning",
+    "guess": 36,
+    "success": 0,
+    "r429": 0,
+    "windowStart": 1757806748325,
+    "lastUp": 1757806748325,
+    "lastDown": 0,
+    "hardCap": false,
+    "last429At": 0
+  },
+  {
+    "model": "microsoft/phi-4-multimodal-instruct",
+    "guess": 36,
+    "success": 0,
+    "r429": 0,
+    "windowStart": 1757806857693,
+    "lastUp": 1757806857693,
+    "lastDown": 0,
+    "hardCap": false,
+    "last429At": 0
+  },
+  {
+    "model": "mistral-ai/codestral-2501",
+    "guess": 36,
+    "success": 0,
+    "r429": 0,
+    "windowStart": 1757806867830,
+    "lastUp": 1757806867830,
+    "lastDown": 0,
+    "hardCap": false,
+    "last429At": 0
+  },
+  {
+    "model": "mistral-ai/ministral-3b",
+    "guess": 36,
+    "success": 0,
+    "r429": 0,
+    "windowStart": 1757806880187,
+    "lastUp": 1757806880187,
+    "lastDown": 0,
+    "hardCap": false,
+    "last429At": 0
+  },
+  {
+    "model": "mistral-ai/mistral-medium-2505",
+    "guess": 36,
+    "success": 0,
+    "r429": 0,
+    "windowStart": 1757806889934,
+    "lastUp": 1757806889934,
+    "lastDown": 0,
+    "hardCap": false,
+    "last429At": 0
+  },
+  {
+    "model": "mistral-ai/mistral-nemo",
+    "guess": 36,
+    "success": 0,
+    "r429": 0,
+    "windowStart": 1757806890353,
+    "lastUp": 1757806890353,
+    "lastDown": 0,
+    "hardCap": false,
+    "last429At": 0
+  },
+  {
+    "model": "mistral-ai/mistral-small-2503",
+    "guess": 43,
+    "success": 0,
+    "r429": 0,
+    "windowStart": 1757813029005,
+    "lastUp": 1757813029005,
+    "lastDown": 0,
+    "hardCap": false,
+    "last429At": 0
+  },
+  {
+    "model": "microsoft/phi-4-reasoning",
+    "guess": 36,
+    "success": 0,
+    "r429": 0,
+    "windowStart": 1757806891716,
+    "lastUp": 1757806891716,
+    "lastDown": 0,
+    "hardCap": false,
+    "last429At": 0
+  },
+  {
+    "model": "xai/grok-3",
+    "guess": 36,
+    "success": 0,
+    "r429": 0,
+    "windowStart": 1757807018858,
+    "lastUp": 1757807018858,
+    "lastDown": 0,
+    "hardCap": false,
+    "last429At": 0
+  },
+  {
+    "model": "xai/grok-3-mini",
+    "guess": 36,
+    "success": 0,
+    "r429": 0,
+    "windowStart": 1757807026343,
+    "lastUp": 1757807026343,
+    "lastDown": 0,
+    "hardCap": false,
+    "last429At": 0
   }
-}
+]

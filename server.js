@@ -53,9 +53,13 @@ const RATE_LIMIT_PER_MINUTE = parseInt(process.env.RATE_LIMIT_PER_MINUTE || '30'
 const RATE_LIMIT_BUCKET_LEEWAY = parseInt(process.env.RATE_LIMIT_BUCKET_LEEWAY || '2', 10); // запас
 const ADAPTIVE_RATE_LIMITS = toBool(process.env.ADAPTIVE_RATE_LIMITS ?? '1');
 const CONCURRENCY_ENABLED = toBool(process.env.UPSTREAM_CONCURRENCY_ENABLED ?? '1');
-const UPSTREAM_MAX_CONCURRENT = parseInt(process.env.UPSTREAM_MAX_CONCURRENT || '5', 10);
-const QUEUE_MAX_LENGTH = parseInt(process.env.UPSTREAM_QUEUE_MAX || '50', 10);
-const QUEUE_WAIT_TIMEOUT_MS = parseInt(process.env.UPSTREAM_QUEUE_TIMEOUT_MS || '30000', 10);
+const UPSTREAM_MAX_CONCURRENT = parseInt(process.env.UPSTREAM_MAX_CONCURRENT || '8', 10); // Increased for better throughput
+const QUEUE_MAX_LENGTH = parseInt(process.env.UPSTREAM_QUEUE_MAX || '100', 10); // Increased queue size
+const QUEUE_WAIT_TIMEOUT_MS = parseInt(process.env.UPSTREAM_QUEUE_TIMEOUT_MS || '45000', 10); // Longer timeout
+const RETRY_ATTEMPTS = parseInt(process.env.RETRY_ATTEMPTS || '3', 10);
+const RETRY_DELAY_MS = parseInt(process.env.RETRY_DELAY_MS || '1000', 10);
+const CIRCUIT_BREAKER_THRESHOLD = parseInt(process.env.CIRCUIT_BREAKER_THRESHOLD || '10', 10);
+const CIRCUIT_BREAKER_TIMEOUT = parseInt(process.env.CIRCUIT_BREAKER_TIMEOUT || '60000', 10);
 
 function toBool(v){
   v = String(v).trim().toLowerCase();
@@ -147,33 +151,116 @@ async function checkRateLimitAsync(key, model){
   return checkRateLimit(key);
 }
 
-// Concurrency gate
-let activeUpstream = 0;
-const waitQueue = [];// each item: {resolve, reject, startedAt}
+// Circuit breaker for upstream failures
+const circuitBreakers = new Map(); // model -> { failures, lastFailure, isOpen }
 
-function acquireSlot(){
+function getCircuitBreaker(model) {
+  if (!circuitBreakers.has(model)) {
+    circuitBreakers.set(model, { failures: 0, lastFailure: 0, isOpen: false });
+  }
+  return circuitBreakers.get(model);
+}
+
+function checkCircuitBreaker(model) {
+  const breaker = getCircuitBreaker(model);
+  const now = Date.now();
+  
+  // Reset if timeout passed
+  if (breaker.isOpen && (now - breaker.lastFailure) > CIRCUIT_BREAKER_TIMEOUT) {
+    breaker.isOpen = false;
+    breaker.failures = 0;
+    console.log(`[CIRCUIT-BREAKER] Reset for model: ${model}`);
+  }
+  
+  return !breaker.isOpen;
+}
+
+function recordFailure(model) {
+  const breaker = getCircuitBreaker(model);
+  breaker.failures++;
+  breaker.lastFailure = Date.now();
+  
+  if (breaker.failures >= CIRCUIT_BREAKER_THRESHOLD) {
+    breaker.isOpen = true;
+    console.log(`[CIRCUIT-BREAKER] Opened for model: ${model} (${breaker.failures} failures)`);
+  }
+}
+
+function recordSuccess(model) {
+  const breaker = getCircuitBreaker(model);
+  breaker.failures = Math.max(0, breaker.failures - 1);
+}
+
+// Enhanced retry logic with exponential backoff
+async function retryWithBackoff(fn, attempts = RETRY_ATTEMPTS, delay = RETRY_DELAY_MS) {
+  for (let i = 0; i < attempts; i++) {
+    try {
+      return await fn();
+    } catch (error) {
+      const isLastAttempt = i === attempts - 1;
+      const isRetryableError = error?.status === 429 || error?.status === 502 || error?.status === 503 || error?.status === 504;
+      
+      if (isLastAttempt || !isRetryableError) {
+        throw error;
+      }
+      
+      const backoffDelay = delay * Math.pow(2, i) + Math.random() * 1000; // Add jitter
+      console.log(`[RETRY] Attempt ${i + 1}/${attempts} failed, retrying in ${Math.round(backoffDelay)}ms:`, error?.message);
+      await new Promise(resolve => setTimeout(resolve, backoffDelay));
+    }
+  }
+}
+
+// Concurrency gate with enhanced queue management
+let activeUpstream = 0;
+const waitQueue = [];// each item: {resolve, reject, startedAt, priority, model}
+
+function acquireSlot(model = 'unknown', priority = 0){
   if(!CONCURRENCY_ENABLED) return Promise.resolve(()=>{});
   return new Promise((resolve, reject)=>{
     const grant = () => {
       activeUpstream += 1;
       let released = false;
-      resolve(()=>{ if(!released){ released=true; activeUpstream = Math.max(0, activeUpstream-1); pumpQueue(); }});
+      const releaseSlot = () => {
+        if(!released){ 
+          released = true; 
+          activeUpstream = Math.max(0, activeUpstream-1); 
+          pumpQueue(); 
+        }
+      };
+      resolve(releaseSlot);
     };
+    
     if(activeUpstream < UPSTREAM_MAX_CONCURRENT){
       grant();
     } else {
       if(waitQueue.length >= QUEUE_MAX_LENGTH){
         return reject(new Error('queue_overflow'));
       }
-      const item = { resolve: grant, reject, startedAt: Date.now() };
-      waitQueue.push(item);
-      // Timeout handling
-      setTimeout(()=>{
-        if(waitQueue.includes(item)){
-          const idx = waitQueue.indexOf(item); if(idx>=0) waitQueue.splice(idx,1);
-          item.reject(new Error('queue_timeout'));
+      
+      const item = { resolve: grant, reject, startedAt: Date.now(), priority, model };
+      
+      // Insert based on priority (higher priority first)
+      let insertIndex = waitQueue.length;
+      for (let i = 0; i < waitQueue.length; i++) {
+        if (waitQueue[i].priority < priority) {
+          insertIndex = i;
+          break;
         }
-      }, QUEUE_WAIT_TIMEOUT_MS).unref?.();
+      }
+      waitQueue.splice(insertIndex, 0, item);
+      
+      // Enhanced timeout handling with cleanup
+      const timeoutId = setTimeout(()=>{
+        const idx = waitQueue.indexOf(item);
+        if(idx >= 0) {
+          waitQueue.splice(idx, 1);
+          item.reject(new Error(`queue_timeout_after_${QUEUE_WAIT_TIMEOUT_MS}ms`));
+        }
+      }, QUEUE_WAIT_TIMEOUT_MS);
+      
+      // Store timeout ID for cleanup
+      item.timeoutId = timeoutId;
     }
   });
 }
@@ -182,19 +269,98 @@ function pumpQueue(){
   if(!CONCURRENCY_ENABLED) return;
   while(activeUpstream < UPSTREAM_MAX_CONCURRENT && waitQueue.length){
     const next = waitQueue.shift();
+    if (next.timeoutId) {
+      clearTimeout(next.timeoutId);
+    }
     next.resolve();
   }
 }
 
-async function executeUpstream(task){
-  const release = await acquireSlot();
-  try { return await task(); } finally { release(); }
+async function executeUpstream(task, model = 'unknown', priority = 0){
+  // Check circuit breaker first
+  if (!checkCircuitBreaker(model)) {
+    throw new Error(`Circuit breaker open for model: ${model}`);
+  }
+  
+  const release = await acquireSlot(model, priority);
+  try { 
+    const result = await retryWithBackoff(task);
+    recordSuccess(model);
+    return result;
+  } catch (error) {
+    recordFailure(model);
+    throw error;
+  } finally { 
+    release(); 
+  }
 }
+
+// Enhanced protection middleware
+const requestCounts = new Map(); // IP -> { count, windowStart }
+const suspiciousIPs = new Set();
+const DDOS_WINDOW_MS = 60000; // 1 minute
+const DDOS_THRESHOLD = 100; // requests per minute per IP
+const MAX_REQUEST_SIZE = 10 * 1024 * 1024; // 10MB
+
+function checkDDoSProtection(req) {
+  const clientIP = req.ip || req.connection.remoteAddress || req.headers['x-forwarded-for']?.split(',')[0];
+  if (!clientIP) return { allowed: true };
+  
+  const now = Date.now();
+  let entry = requestCounts.get(clientIP);
+  
+  if (!entry || (now - entry.windowStart) >= DDOS_WINDOW_MS) {
+    entry = { count: 0, windowStart: now };
+  }
+  
+  entry.count += 1;
+  requestCounts.set(clientIP, entry);
+  
+  if (entry.count > DDOS_THRESHOLD) {
+    suspiciousIPs.add(clientIP);
+    console.log(`[DDOS-PROTECTION] Blocked suspicious IP: ${clientIP} (${entry.count} requests)`);
+    return { allowed: false, reason: 'ddos_protection' };
+  }
+  
+  return { allowed: true };
+}
+
+function validateRequestSize(req, res, next) {
+  const contentLength = parseInt(req.headers['content-length'] || '0');
+  if (contentLength > MAX_REQUEST_SIZE) {
+    return res.status(413).json({
+      error: {
+        message: `Request too large. Maximum size is ${MAX_REQUEST_SIZE} bytes`,
+        type: 'invalid_request_error',
+        param: 'content-length',
+        code: 'request_too_large'
+      }
+    });
+  }
+  next();
+}
+
+// Apply request size validation
+app.use('/v1', validateRequestSize);
 
 // Middleware applying rate limit & queue introspection
 app.use(async (req,res,next)=>{
   // Only guard API routes under /v1/* (exclude /health, static)
   if(!/\/v1\//.test(req.path)) return next();
+  
+  // DDoS protection
+  const ddosCheck = checkDDoSProtection(req);
+  if (!ddosCheck.allowed) {
+    return res.status(429).json({
+      error: {
+        message: 'Too many requests from this IP address',
+        type: 'rate_limit_exceeded',
+        param: 'ip',
+        code: 'ddos_protection'
+      }
+    });
+  }
+  
   const apiKey = getApiKeyFromRequest(req) || 'anon';
   const model = req.body?.model || 'general';
   const rateKey = `${apiKey}:${model}`;
@@ -920,8 +1086,9 @@ app.post("/v1/proxy", async (req, res) => {
   const client = getClient(req);
   if (type === "chat") {
       const messages = Array.isArray(input) ? input : [{ role: "user", content: String(input) }];
+      // Direct model request without fallback - let orchestrator handle model selection
       const response = await client.chat.completions.create({
-        model,
+        model: model,
         messages,
         ...options
       });
@@ -1078,7 +1245,7 @@ app.post('/v1/embeddings', async (req, res) => {
     }
     let response;
     try {
-      response = await executeUpstream(()=> client.embeddings.create({ model, input, ...other }));
+      response = await executeUpstream(()=> client.embeddings.create({ model, input, ...other }), model, 1);
       adjustAdaptiveOnSuccess(model);
       incrementDailyUsage(model,false);
     } catch (e){
@@ -1177,7 +1344,7 @@ app.post('/v1/completions', async (req, res) => {
     }
     let response;
     try {
-      response = await executeUpstream(()=> client.chat.completions.create({ model, messages, ...other }));
+      response = await executeUpstream(()=> client.chat.completions.create({ model, messages, ...other }), model, 2);
       adjustAdaptiveOnSuccess(model);
   try { incrementDailyUsage(model,false); } catch(_){}
     } catch(e){
@@ -1223,7 +1390,7 @@ if (STRICT_OPENAI_API) {
       }
       let response;
       try {
-        response = await executeUpstream(()=> client.embeddings.create({ model, input, ...other }));
+        response = await executeUpstream(()=> client.embeddings.create({ model, input, ...other }), model, 1);
         adjustAdaptiveOnSuccess(model);
         try { incrementDailyUsage(model,false); } catch(_){}
       } catch(e){
@@ -1288,7 +1455,7 @@ if (STRICT_OPENAI_API) {
       }
       let response;
       try {
-        response = await executeUpstream(()=> client.chat.completions.create({ model, messages, ...other }));
+        response = await executeUpstream(()=> client.chat.completions.create({ model, messages, ...other }), model, 2);
         adjustAdaptiveOnSuccess(model);
   try { incrementDailyUsage(model,false); } catch(_){}
       } catch(e){
@@ -1425,8 +1592,9 @@ async function handleChatCompletions(req, res) {
 
   try {
     const client = getClient(req);
+    // Direct model request without fallback - let orchestrator handle model selection
     const response = await client.chat.completions.create({
-      model,
+      model: model,
       messages,
       ...otherOptions
     });
