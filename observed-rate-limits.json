@@ -5,7 +5,7 @@
     "hardCap": false,
     "last429At": 1757809459085,
     "updated_at": 1757251759964,
-    "success": 117,
+    "success": 119,
     "r429": 9
   },
   {
@@ -18,14 +18,14 @@
   },
   {
     "model": "ai21-labs/ai21-jamba-1.5-large",
-    "guess": 200,
-    "success": 1,
-    "r429": 0,
-    "windowStart": 1757799471402,
+    "guess": 1,
+    "success": 0,
+    "r429": 1,
+    "windowStart": 1757822717981,
     "lastUp": 1757784247753,
-    "lastDown": 0,
-    "hardCap": false,
-    "last429At": 0
+    "lastDown": 1757822640935,
+    "hardCap": true,
+    "last429At": 1757822717981
   },
   {
     "model": "meta/llama-3.2-11b-vision-instruct",
@@ -40,14 +40,14 @@
   },
   {
     "model": "openai/gpt-4o",
-    "guess": 200,
-    "success": 1,
-    "r429": 0,
-    "windowStart": 1757809273132,
+    "guess": 10,
+    "success": 0,
+    "r429": 1,
+    "windowStart": 1757814755348,
     "lastUp": 1757798416184,
-    "lastDown": 1757777856338,
+    "lastDown": 1757814755348,
     "hardCap": false,
-    "last429At": 1757777856338
+    "last429At": 1757814755348
   },
   {
     "model": "microsoft/phi-3.5-mini-instruct",
